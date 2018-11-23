@@ -22,7 +22,7 @@ void init(){
 	ptr_myfile=fopen("fat.part","wb");
 
 	if (!ptr_myfile){
-		printf("Unable to open file!");
+		printf("Impossivel abrir o arquivo!");
 		return;
 	}
 
@@ -64,8 +64,40 @@ void init(){
 
 }
 
+
+void load (){
+	FILE *ptr_myfile;
+
+	ptr_myfile=fopen("fat.part","rb");
+
+	if (!ptr_myfile){
+		printf("Impossivel abrir o arquivo!");
+		return;
+	}
+
+	union data_cluster boot_block;
+
+	//carrega o boot_block para a memoria
+	fread(&boot_block,sizeof(union data_cluster),1,ptr_myfile);
+	int i;
+
+	for (i = 0; i < CLUSTER_SIZE; i++){
+		if (boot_block.data[i] != 0xbb){
+			printf ("Problemas no endereços do boot_block");
+		}
+
+	}
+
+	//carrega a fat para a memoria
+	fread(&fat, sizeof(fat), 1, ptr_myfile);
+
+	fclose(ptr_myfile);
+
+
+}
+
 int main()
 {
-   init();
+   load();
    return 0;
 }
