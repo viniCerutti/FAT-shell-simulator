@@ -95,8 +95,28 @@ void load (){
 	fclose(ptr_myfile);
 }
 
-void mkdir (char* directories){
-	
+void ls (char* directories){
+	//TO DO...
+}
+
+union data_cluster __readCluster__(int index){
+	FILE *ptr_myfile;
+
+	ptr_myfile=fopen("fat.part","rb");
+	union data_cluster cluster;
+
+	if (!ptr_myfile){
+		printf("Impossivel abrir o arquivo!");
+		return cluster;
+	}
+
+	fseek(ptr_myfile,( CLUSTER_SIZE * index), SEEK_SET);
+	fread(&cluster,sizeof(union data_cluster),1,ptr_myfile);
+
+	fclose(ptr_myfile);
+
+	return cluster;
+
 }
 
 void __loadfat__(){
@@ -109,7 +129,7 @@ void __loadfat__(){
 		return;
 	}
 
-	fseek(ptr_myfile,sizeof(union data_cluster),SEEK_SET);
+	fseek(ptr_myfile,CLUSTER_SIZE,SEEK_SET);
 	//carrega a fat para a memoria
 	fread(&fat, sizeof(fat), 1, ptr_myfile);
 	fclose(ptr_myfile);
@@ -123,7 +143,11 @@ void __loadfat__(){
 
 int main()
 {
+   printf("%ld",sizeof(union data_cluster));
    char teste[20] = "/root/home";
+   //ls(teste);
    __loadfat__();
+   int i;
+
    return 0;
 }
