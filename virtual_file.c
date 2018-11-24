@@ -6,6 +6,10 @@
 #define FAT_SIZE 4096
 #define ROOT_NAME "root"
 typedef struct{
+	uint8_t filename[18];
+	uint8_t attributes;
+	uint8_t reserved[7];
+	uint16_t first_block;
 	uint32_t size;
 } dir_entry_t;
 
@@ -95,10 +99,6 @@ void load (){
 	fclose(ptr_myfile);
 }
 
-void ls (char* directories){
-	//TO DO...
-}
-
 union data_cluster __readCluster__(int index){
 	FILE *ptr_myfile;
 
@@ -111,11 +111,66 @@ union data_cluster __readCluster__(int index){
 	}
 
 	fseek(ptr_myfile,( CLUSTER_SIZE * index), SEEK_SET);
-	fread(&cluster,CLUSTER_SIZE,1,ptr_myfile);
+	fread(&cluster,sizeof(union data_cluster),1,ptr_myfile);
 
 	fclose(ptr_myfile);
 
 	return cluster;
+
+}
+
+void ls (char* directories){
+	char * token;
+
+	token = strtok(directories,"/"); // pega o primeiro elemento apos root
+
+	union data_cluster block;
+
+	if (directories[0] == '/'){
+		block = __readCluster__(9);
+	}else{
+		printf("Caminho não possui diretório root!");
+		return;
+	}
+
+	// procura o diretorio atual no anterior, se encontrar
+	// então pode-se procurar o proximo diretorio neste de agora
+	// acontece isso até chegar no último diretório que no final
+	// teremos o os diretorios / arquivos deste diretório.
+
+	while( token != NULL ) {
+		printf( " %s\n", token );
+		int i;
+		int size_dir = CLUSTER_SIZE / sizeof(dir_entry_t);
+		int found_dir = 0;
+
+		// procura o diretorio atual no anterior
+		for (i = 0; i < size_dir; i ++){
+
+			if (strcmp(block.dir[i].filename,token) == 0){
+				found_dir = 1;
+				if(block.dir[i].attributes == 1){
+					block = __readCluster__(block.dir[i].first_block);
+				}else{
+					printf("%s não é um diretório!\n",token);
+				}
+				break;
+			}
+		}
+		if (!found_dir){
+			printf("Não existe este diretório %s\n",token);
+		}
+
+		token = strtok(NULL, "/");
+	}
+
+	// block possui agora o cluster do último diretório
+
+	int i;
+	int size_dir = CLUSTER_SIZE / sizeof(dir_entry_t);
+	for (i = 0; i < size_dir; i ++){
+		printf("%s ",block.dir[i].filename);
+	}
 
 }
 
@@ -160,7 +215,6 @@ void __loadfat__(){
 
 int main()
 {
-   printf("%ld",CLUSTER_SIZE);
    char teste[20] = "/root/home";
    //ls(teste);
    init();
