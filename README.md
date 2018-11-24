@@ -1,6 +1,6 @@
-# T2-Sisop #
+# T2-Sisop 
 
-##To-Do:
+## To-Do:
  - [ ] init - inicializar o fs com as estruturas de dados, format;
  - [ ] load - carregar o fs do disco;
  - [ ] ls - listar diretório;
@@ -11,7 +11,7 @@
  - [ ] append 'string' - anexar dados em um arquivo;
  - [ ] read - ler conteúdo
  
-######Formato dos comandos:
+###### Formato dos comandos:
 * init
 * load
 * ls        /caminho/diretorio 
