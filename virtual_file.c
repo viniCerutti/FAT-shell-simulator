@@ -174,6 +174,33 @@ void ls (char* directories){
 
 }
 
+void mkdir(char* directories){
+
+	char dir_copy[strlen(directories)];
+
+	strcpy(dir_copy,directories);
+
+	char * token;
+	token = strtok(directories,"/"); // pega o primeiro elemento apos root
+	
+	int count = 0;
+
+	while(token != NULL){
+		printf("%s\n",token);
+		token = strtok(NULL,"/"); 
+		count++;
+	}
+
+	printf("\n");
+	token = strtok(dir_copy,"/");
+	
+	while( count > 1){
+		printf("%s\n",token);
+		token = strtok(NULL,"/"); 
+		count--;
+	}
+}
+
 void __writeCluster__(int index, union data_cluster *cluster){
     FILE *ptr_myfile;
 
@@ -216,15 +243,6 @@ void __loadfat__(){
 int main()
 {
    char teste[20] = "/root/home";
-   //ls(teste);
-   init();
-   __loadfat__();
-   int i;
-   union data_cluster cluster1;
-   for (i = 0; i < CLUSTER_SIZE; i++){
-        cluster1.data[i] = 0xdc;
-   }
-    __writeCluster__(4096,&cluster1);
-
+   mkdir(teste);
     return 0;
 }
