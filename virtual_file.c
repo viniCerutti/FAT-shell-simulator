@@ -205,7 +205,6 @@ int __findFreeSpaceFat__(){
 
 void mkdir(char* directories){
 	char dir_copy[strlen(directories)];
-
 	strcpy(dir_copy,directories);
 
 	char * token;
@@ -222,7 +221,7 @@ void mkdir(char* directories){
 		printf("Caminho não possui diretório root!");
 		return;
 	}
-
+	
 	int count = 0;
 
 	while(token != NULL){
@@ -233,6 +232,7 @@ void mkdir(char* directories){
 
 	printf("\n");
 	token = strtok(dir_copy,"/");
+	printf("casa");
 
 	while( count > 1){
 		printf("%s\n",token);
@@ -278,7 +278,6 @@ void mkdir(char* directories){
 
 			fat[index_fat] = 0xffff;
 			dir_entry_t new_dir;
-			token = strtok(NULL,"/"); 
 
 			strcpy(new_dir.filename ,token);
 			new_dir.attributes = 1;
@@ -286,8 +285,7 @@ void mkdir(char* directories){
 			new_dir.size = 1;
 
 			block.dir[i] = new_dir;
-
-			__writeCluster__(index_fat,&block);
+			__writeCluster__(index_block_fat,&block);
 			
 			break;
 		}
@@ -320,6 +318,8 @@ void __loadfat__(){
 int main()
 {
    char teste[20] = "/home";
+   init();
+   load();
    mkdir(teste);
     return 0;
 }
