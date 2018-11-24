@@ -1,9 +1,10 @@
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
 
 #define CLUSTER_SIZE 1024
 #define FAT_SIZE 4096
-
+#define ROOT_NAME "root"
 typedef struct{
 	uint32_t size;
 } dir_entry_t;
@@ -84,20 +85,45 @@ void load (){
 	for (i = 0; i < CLUSTER_SIZE; i++){
 		if (boot_block.data[i] != 0xbb){
 			printf ("Problemas no endereços do boot_block");
+			return;
 		}
 
 	}
-
 	//carrega a fat para a memoria
 	fread(&fat, sizeof(fat), 1, ptr_myfile);
 
 	fclose(ptr_myfile);
+}
 
+void mkdir (char* directories){
+	
+}
 
+void __loadfat__(){
+	FILE *ptr_myfile;
+
+	ptr_myfile=fopen("fat.part","rb");
+
+	if (!ptr_myfile){
+		printf("Impossivel abrir o arquivo!");
+		return;
+	}
+
+	fseek(ptr_myfile,sizeof(union data_cluster),SEEK_SET);
+	//carrega a fat para a memoria
+	fread(&fat, sizeof(fat), 1, ptr_myfile);
+	fclose(ptr_myfile);
+
+	int i;
+
+	for (i=0; i < FAT_SIZE; i++){
+		printf("%d -> 0x%04x\n",i,fat[i]);
+	}
 }
 
 int main()
 {
-   load();
+   char teste[20] = "/root/home";
+   __loadfat__();
    return 0;
 }
