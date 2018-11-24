@@ -54,12 +54,12 @@ void init(){
 
 	union data_cluster clusters;
 	printf("teste");
-	fwrite(&boot_block, sizeof(union data_cluster), 1, ptr_myfile);
+	fwrite(&boot_block, CLUSTER_SIZE, 1, ptr_myfile);
 	fwrite(&fat_init, sizeof(fat_init), 1, ptr_myfile);
 
 	// salva no arquivos cluster root + outros clusters
 	for (i = 0; i < 4086; i++){
-		fwrite(&clusters, sizeof(union data_cluster), 1, ptr_myfile);
+		fwrite(&clusters, CLUSTER_SIZE, 1, ptr_myfile);
 	}
 	fclose(ptr_myfile);
 
@@ -79,7 +79,7 @@ void load (){
 	union data_cluster boot_block;
 
 	//carrega o boot_block para a memoria
-	fread(&boot_block,sizeof(union data_cluster),1,ptr_myfile);
+	fread(&boot_block,CLUSTER_SIZE,1,ptr_myfile);
 	int i;
 
 	for (i = 0; i < CLUSTER_SIZE; i++){
@@ -111,12 +111,29 @@ union data_cluster __readCluster__(int index){
 	}
 
 	fseek(ptr_myfile,( CLUSTER_SIZE * index), SEEK_SET);
-	fread(&cluster,sizeof(union data_cluster),1,ptr_myfile);
+	fread(&cluster,CLUSTER_SIZE,1,ptr_myfile);
 
 	fclose(ptr_myfile);
 
 	return cluster;
 
+}
+
+void __writeCluster__(int index, union data_cluster *cluster){
+    FILE *ptr_myfile;
+
+    ptr_myfile=fopen("fat.part","rb+");
+
+    if (!ptr_myfile){
+        printf("Impossivel abrir o arquivo!");
+        return;
+    }
+    //estando no endereço final do arquivo, devemos calcular offset = (index - num_clusters)*cluster_size
+    //esse offset descontará do final do arquivo e assim o fseek ficará em cima do cluster q queremos.
+    fseek(ptr_myfile,(index - FAT_SIZE)*CLUSTER_SIZE, SEEK_END);
+    fwrite(&cluster,CLUSTER_SIZE,1,ptr_myfile);
+
+    fclose(ptr_myfile);
 }
 
 void __loadfat__(){
@@ -143,11 +160,17 @@ void __loadfat__(){
 
 int main()
 {
-   printf("%ld",sizeof(union data_cluster));
+   printf("%ld",CLUSTER_SIZE);
    char teste[20] = "/root/home";
    //ls(teste);
+   init();
    __loadfat__();
    int i;
+   union data_cluster cluster1;
+   for (i = 0; i < CLUSTER_SIZE; i++){
+        cluster1.data[i] = 0xdc;
+   }
+    __writeCluster__(4096,&cluster1);
 
-   return 0;
+    return 0;
 }
