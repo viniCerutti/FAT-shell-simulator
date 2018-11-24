@@ -1,8 +1,8 @@
 # T2-Sisop 
 
 ## To-Do:
- - [ ] init - inicializar o fs com as estruturas de dados, format;
- - [ ] load - carregar o fs do disco;
+ - [x] init - inicializar o fs com as estruturas de dados, format;
+ - [x] load - carregar o fs do disco;
  - [ ] ls - listar diretório;
  - [ ] mkdir - criar diretório;
  - [ ] create - criar arquivo;
