@@ -184,9 +184,8 @@ void __writeCluster__(int index, union data_cluster *cluster){
         printf("Impossivel abrir o arquivo!");
         return;
     }
-    //estando no endereço final do arquivo, devemos calcular offset = (index - num_clusters)*cluster_size
-    //esse offset descontará do final do arquivo e assim o fseek ficará em cima do cluster q queremos.
-    fseek(ptr_myfile,(index - FAT_SIZE)*CLUSTER_SIZE, SEEK_END);
+    
+    fseek(ptr_myfile,(index*CLUSTER_SIZE), SEEK_SET);
     fwrite(&cluster,CLUSTER_SIZE,1,ptr_myfile);
 
     fclose(ptr_myfile);
