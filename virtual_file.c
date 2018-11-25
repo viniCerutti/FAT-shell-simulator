@@ -176,7 +176,6 @@ void ls (char* directories){
 
 }
 
-
 void __writeCluster__(int index, union data_cluster *cluster){
     FILE *ptr_myfile;
 
@@ -202,6 +201,22 @@ int __findFreeSpaceFat__(){
 	}
 
 	return -1;
+}
+
+void __writeFat__(){
+	FILE *ptr_myfile;
+
+	ptr_myfile=fopen("fat.part","rb+");
+
+	if (!ptr_myfile){
+	    printf("Impossivel abrir o arquivo!");
+	    return;
+	}
+
+	fseek(ptr_myfile,(CLUSTER_SIZE), SEEK_SET);
+	fwrite(&fat,FAT_SIZE,1,ptr_myfile);
+
+	fclose(ptr_myfile);
 }
 
 void mkdir(char* directories){
@@ -269,7 +284,8 @@ void mkdir(char* directories){
 	int i;
 	for (i = 0; i < size_dir; i++){
 
-		if (strcmp(block.dir[i].filename, token)){
+		if (strcmp(block.dir[i].filename, token) == 0){
+			printf("%s",token);
 			printf("\nJá possui pasta neste diretório com este mesmo nome!\n");
 				return;
 		}
@@ -296,14 +312,14 @@ void mkdir(char* directories){
 			printf("%d",index_block_fat);
 			printf("\nindex fat = %d\n",index_fat);
 			__writeCluster__(index_block_fat,&block);
-			
+			__writeFat__();
 			break;
 		}
 	}
 
 }
 
-void __loadfat__(){
+void __loadFat__(){
 	FILE *ptr_myfile;
 
 	ptr_myfile=fopen("fat.part","rb");
@@ -327,7 +343,7 @@ void __loadfat__(){
 
 int main()
 {
-   char teste[12] = "/media";
+   char teste[6] = "/casa";
    char teste2[7] = "/media";
    load();
    mkdir(teste);
