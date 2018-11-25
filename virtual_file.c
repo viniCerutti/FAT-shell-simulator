@@ -169,7 +169,9 @@ void ls (char* directories){
 	int i;
 	int size_dir = CLUSTER_SIZE / sizeof(dir_entry_t);
 	for (i = 0; i < size_dir; i ++){
-		printf("%s",block.dir[i].filename);
+		if(block.dir[i].first_block != 0){
+			printf("%s\n",block.dir[i].filename);
+		}
 	}
 
 }
@@ -232,8 +234,8 @@ void mkdir(char* directories){
 	printf("\n");
 	token = strtok(dir_copy,"/");
 	printf("casa");
-
-	while( count > 1){
+	printf("count = %d", count);
+	while( count > 1){;
 		printf("%s\n",token);
 		int i;
 		int size_dir = CLUSTER_SIZE / sizeof(dir_entry_t);
@@ -256,6 +258,7 @@ void mkdir(char* directories){
 
 		if (!found_dir){
 			printf("Não existe este diretório %s\n",token);
+			return;
 		}
 
 		token = strtok(NULL,"/"); 
@@ -266,12 +269,17 @@ void mkdir(char* directories){
 	int i;
 	for (i = 0; i < size_dir; i++){
 
+		if (strcmp(block.dir[i].filename, token)){
+			printf("\nJá possui pasta neste diretório com este mesmo nome!\n");
+				return;
+		}
+
 		if (block.dir[i].first_block == 0){
 			
 			int index_fat = __findFreeSpaceFat__();
 
 			if(index_fat == -1 ){
-				printf("Fat não possui espaço vazio!\n");
+				printf("\nFat não possui espaço vazio!\n");
 				return;
 			}
 
@@ -286,6 +294,7 @@ void mkdir(char* directories){
 
 			block.dir[i] = new_dir;
 			printf("%d",index_block_fat);
+			printf("\nindex fat = %d\n",index_fat);
 			__writeCluster__(index_block_fat,&block);
 			
 			break;
@@ -318,9 +327,8 @@ void __loadfat__(){
 
 int main()
 {
-   char teste[5] = "/home";
-   char teste2[4] = "/";
-   init();
+   char teste[12] = "/media";
+   char teste2[7] = "/media";
    load();
    mkdir(teste);
    printf("\n");
