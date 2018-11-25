@@ -329,6 +329,113 @@ void mkdir(char* directories){
 
 }
 
+void create(char* directories){
+    char dir_copy[strlen(directories)];
+    strcpy(dir_copy,directories);
+
+    char * token;
+    token = strtok(directories,"/"); // pega o primeiro elemento apos root
+
+    int index_block_fat = 0;
+
+    union data_cluster block;
+
+    if (directories[0] == '/'){
+        index_block_fat = 9;
+        block = __readCluster__(9);
+    }else{
+        printf("Caminho não possui diretório root!");
+        return;
+    }
+
+    int count = 0;
+
+    // conta quantos direitorios há na string
+    while(token != NULL){
+        printf("%s\n",token);
+        token = strtok(NULL,"/");
+        count++;
+    }
+
+    printf("\n");
+    token = strtok(dir_copy,"/");
+    printf("count = %d", count);
+
+    // caminha nos diretórios até chegar no penúltimo
+    // no qual é o arquivo que deve ser criado
+    while( count > 1){;
+        printf("%s\n",token);
+        int i;
+        int size_dir = CLUSTER_SIZE / sizeof(dir_entry_t);
+        int found_dir = 0;
+
+        // procura o diretorio atual no anterior
+        for (i = 0; i < size_dir; i ++){
+
+            if (strcmp(block.dir[i].filename,token) == 0){
+                found_dir = 1;
+                if(block.dir[i].attributes == 1){
+                    index_block_fat = block.dir[i].first_block;
+                    block = __readCluster__(block.dir[i].first_block);
+                }else{
+                    printf("%s não é um diretório!\n",token);
+                }
+                break;
+            }
+        }
+
+        if (!found_dir){
+            printf("Não existe este diretório %s\n",token);
+            return;
+        }
+
+        token = strtok(NULL,"/");
+        count--;
+    }
+    int size_dir = CLUSTER_SIZE / sizeof(dir_entry_t);
+    int i;
+
+    // tendo o diretorio no qual queremos criar o novo arquivo (token)
+    // basta verificar se nao existe um arquivo com este mesmo nome
+    // verificar se possui um bloco livre no diretório e na fat
+    for (i = 0; i < size_dir; i++){
+
+        if (strcmp(block.dir[i].filename, token) == 0){
+            printf("%s",token);
+            printf("\nJá possui uma entrada neste diretório com este mesmo nome!\n");
+            return;
+        }
+        if (block.dir[i].first_block == 0){
+
+            int index_fat = __findFreeSpaceFat__();
+
+            if(index_fat == -1 ){
+                printf("\nFat não possui espaço vazio!\n");
+                return;
+            }
+
+            fat[index_fat] = 0xffff;
+            dir_entry_t new_arq;
+            // limpa o novo arquivo a ser criado (apaga os lixos da memoria)
+
+            memset(&new_arq,0x00,sizeof(dir_entry_t));
+            memcpy(new_arq.filename,token,sizeof(char) * strlen(token));
+            new_arq.attributes = 0;
+            new_arq.first_block = index_fat;
+            new_arq.size = 0;
+
+            // salva este novo arquivo no bloco do pai
+            block.dir[i] = new_arq;
+            printf("%d",index_block_fat);
+            printf("\nindex fat = %d\n",index_fat);
+            __writeCluster__(index_block_fat,&block);
+            __writeFat__();
+            break;
+        }
+    }
+
+}
+
 void __loadFat__(){
 	FILE *ptr_myfile;
 
@@ -353,11 +460,15 @@ void __loadFat__(){
 
 int main()
 {
-   char teste[6] = "/casa";
-   char teste2[7] = "/media";
+	init();
+   char teste[7] = "/media";
+   char teste2[13] = "/media/oi.txt";
    load();
    mkdir(teste);
+   ls("/");
    printf("\n");
-   ls(teste2);
+   create(teste2);
+   printf("\n");
+   //ls(teste);
     return 0;
 }
