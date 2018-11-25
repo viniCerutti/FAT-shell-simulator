@@ -184,8 +184,9 @@ void __writeCluster__(int index, union data_cluster *cluster){
         printf("Impossivel abrir o arquivo!");
         return;
     }
-    
-    fseek(ptr_myfile,(index*CLUSTER_SIZE), SEEK_SET);
+    //estando no endereço final do arquivo, devemos calcular offset = (index - num_clusters)*cluster_size
+    //esse offset descontará do final do arquivo e assim o fseek ficará em cima do cluster q queremos.
+    fseek(ptr_myfile,(index - FAT_SIZE)*CLUSTER_SIZE, SEEK_END);
     fwrite(&cluster,CLUSTER_SIZE,1,ptr_myfile);
 
     fclose(ptr_myfile);
@@ -284,6 +285,7 @@ void mkdir(char* directories){
 			new_dir.size = 1;
 
 			block.dir[i] = new_dir;
+			printf("%d",index_block_fat);
 			__writeCluster__(index_block_fat,&block);
 			
 			break;
@@ -319,6 +321,7 @@ int main()
    char teste[20] = "/home";
    init();
    load();
+
    mkdir(teste);
     return 0;
 }
