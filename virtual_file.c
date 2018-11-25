@@ -240,6 +240,7 @@ void mkdir(char* directories){
 	
 	int count = 0;
 
+	// conta quantos direitorios há na string
 	while(token != NULL){
 		printf("%s\n",token);
 		token = strtok(NULL,"/"); 
@@ -250,6 +251,9 @@ void mkdir(char* directories){
 	token = strtok(dir_copy,"/");
 	printf("casa");
 	printf("count = %d", count);
+
+	// caminha nos diretórios até chegar no ultimo 
+	// no qual é o que deve ser criado
 	while( count > 1){;
 		printf("%s\n",token);
 		int i;
@@ -282,6 +286,10 @@ void mkdir(char* directories){
 
 	int size_dir = CLUSTER_SIZE / sizeof(dir_entry_t);
 	int i;
+
+	// tendo o diretorio no qual queremos criar o novo (token)
+	// basta verificar se nao existe um aqruivo com este mesmo nome
+	// verificar se possui um bloco livre no diretório e na fat
 	for (i = 0; i < size_dir; i++){
 
 		if (strcmp(block.dir[i].filename, token) == 0){
@@ -301,6 +309,7 @@ void mkdir(char* directories){
 
 			fat[index_fat] = 0xffff;
 			dir_entry_t new_dir;
+			// limpa o novo diretorio a ser criado (apaga os lixos da memoria)
 
 			memset(&new_dir,0x00,32);
 			memcpy(new_dir.filename,token,sizeof(char) * strlen(token));
@@ -308,6 +317,7 @@ void mkdir(char* directories){
 			new_dir.first_block = index_fat;
 			new_dir.size = 0;
 
+			// salva este novo diretorio no bloco do pai
 			block.dir[i] = new_dir;
 			printf("%d",index_block_fat);
 			printf("\nindex fat = %d\n",index_fat);
