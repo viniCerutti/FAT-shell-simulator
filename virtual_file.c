@@ -57,6 +57,7 @@ void init(){
 	}
 
 	union data_cluster clusters;
+
 	printf("teste");
 	fwrite(&boot_block, CLUSTER_SIZE, 1, ptr_myfile);
 	fwrite(&fat_init, sizeof(fat_init), 1, ptr_myfile);
@@ -121,7 +122,6 @@ union data_cluster __readCluster__(int index){
 
 void ls (char* directories){
 	char * token;
-
 	token = strtok(directories,"/"); // pega o primeiro elemento apos root
 
 	union data_cluster block;
@@ -169,7 +169,7 @@ void ls (char* directories){
 	int i;
 	int size_dir = CLUSTER_SIZE / sizeof(dir_entry_t);
 	for (i = 0; i < size_dir; i ++){
-		printf("%s ",block.dir[i].filename);
+		printf("%s",block.dir[i].filename);
 	}
 
 }
@@ -184,10 +184,9 @@ void __writeCluster__(int index, union data_cluster *cluster){
         printf("Impossivel abrir o arquivo!");
         return;
     }
-    //estando no endereço final do arquivo, devemos calcular offset = (index - num_clusters)*cluster_size
-    //esse offset descontará do final do arquivo e assim o fseek ficará em cima do cluster q queremos.
-    fseek(ptr_myfile,(index - FAT_SIZE)*CLUSTER_SIZE, SEEK_END);
-    fwrite(&cluster,CLUSTER_SIZE,1,ptr_myfile);
+
+    fseek(ptr_myfile,(index*CLUSTER_SIZE), SEEK_SET);
+    fwrite(cluster,CLUSTER_SIZE,1,ptr_myfile);
 
     fclose(ptr_myfile);
 }
@@ -279,10 +278,11 @@ void mkdir(char* directories){
 			fat[index_fat] = 0xffff;
 			dir_entry_t new_dir;
 
-			strcpy(new_dir.filename ,token);
+			memset(&new_dir,0x00,32);
+			memcpy(new_dir.filename,token,sizeof(char) * strlen(token));
 			new_dir.attributes = 1;
 			new_dir.first_block = index_fat;
-			new_dir.size = 1;
+			new_dir.size = 0;
 
 			block.dir[i] = new_dir;
 			printf("%d",index_block_fat);
@@ -318,10 +318,12 @@ void __loadfat__(){
 
 int main()
 {
-   char teste[20] = "/home";
+   char teste[5] = "/home";
+   char teste2[4] = "/";
    init();
    load();
-
    mkdir(teste);
+   printf("\n");
+   ls(teste2);
     return 0;
 }
