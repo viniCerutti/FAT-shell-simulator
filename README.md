@@ -3,8 +3,8 @@
 ## To-Do:
  - [x] init - inicializar o fs com as estruturas de dados, format;
  - [x] load - carregar o fs do disco;
- - [ ] ls - listar diretório;
- - [ ] mkdir - criar diretório;
+ - [x] ls - listar diretório;
+ - [x] mkdir - criar diretório;
  - [ ] create - criar arquivo;
  - [ ] unlink - deletar arquivo ou diretório (deve estar vazio);
  - [ ] write 'string' - escrever dados em um arquivo (overwrite);
