@@ -219,6 +219,113 @@ void __writeFat__(){
 	fclose(ptr_myfile);
 }
 
+
+void unlink(char* directories){
+	char dir_copy[strlen(directories)];
+	strcpy(dir_copy,directories);
+
+	char * token;
+	token = strtok(directories,"/"); // pega o primeiro elemento apos root
+	
+	int index_block_fat = 0;
+
+	union data_cluster block;
+
+	if (directories[0] == '/'){
+		index_block_fat = 9;
+		block = __readCluster__(9);
+	}else{
+		printf("Caminho não possui diretório root!");
+		return;
+	}
+	
+	int count = 0;
+
+	// conta quantos direitorios há na string
+	while(token != NULL){
+		printf("%s\n",token);
+		token = strtok(NULL,"/"); 
+		count++;
+	}
+
+	printf("\n");
+	token = strtok(dir_copy,"/");
+	printf("casa");
+	printf("count = %d", count);
+
+	// caminha nos diretórios até chegar no ultimo 
+	// no qual é o que deve ser criado
+	while( count > 1){;
+		printf("%s\n",token);
+		int i;
+		int size_dir = CLUSTER_SIZE / sizeof(dir_entry_t);
+		int found_dir = 0;
+
+		// procura o diretorio atual no anterior
+		for (i = 0; i < size_dir; i ++){
+
+			if (strcmp(block.dir[i].filename,token) == 0){
+				found_dir = 1;
+				if(block.dir[i].attributes == 1){
+					index_block_fat = block.dir[i].first_block;
+					block = __readCluster__(block.dir[i].first_block);
+				}else{
+					printf("%s não é um diretório!\n",token);
+				}
+				break;
+			}
+		}
+
+		if (!found_dir){
+			printf("Não existe este diretório %s\n",token);
+			return;
+		}
+
+		token = strtok(NULL,"/"); 
+		count--;
+	}
+
+	int size_dir = CLUSTER_SIZE / sizeof(dir_entry_t);
+	int i;
+	int found_unlink = 0;
+	// tendo o diretorio no qual queremos criar o novo (token)
+	// basta verificar se nao existe um aqruivo com este mesmo nome
+	// verificar se possui um bloco livre no diretório e na fat
+	for (i = 0; i < size_dir; i++){
+
+		if (strcmp(block.dir[i].filename, token) == 0){
+			if(block.dir[i].attributes == 1){
+				found_unlink = 1;
+				union data_cluster cluster_dir = __readCluster__(block.dir[i].first_block);
+
+				int j;
+				for (j = 0; j < size_dir; j++){
+					if(cluster_dir.dir[j].first_block != 0){
+						printf("\nDiretório ainda possui elementos!\n");
+						return;
+					}
+				}
+
+				memset(&cluster_dir,0x0000,CLUSTER_SIZE);
+				fat[block.dir[i].first_block] = 0x0000;
+
+				__writeCluster__(block.dir[i].first_block,&cluster_dir);
+				memset(&block.dir[i],0x0000,sizeof(dir_entry_t));
+
+				__writeCluster__(index_block_fat,&block);
+				__writeFat__();
+				break;
+			}
+		}	
+	}
+
+	if(!found_unlink){
+		printf("\nArquivo não encontrado!\n");
+		return;
+	}
+}
+
+
 void mkdir(char* directories){
 	char dir_copy[strlen(directories)];
 	strcpy(dir_copy,directories);
@@ -353,11 +460,14 @@ void __loadFat__(){
 
 int main()
 {
-   char teste[6] = "/casa";
-   char teste2[7] = "/media";
+   init();
+   char teste[7] = "/media";
+   char teste2[13] = "/media/oi.txt";
    load();
    mkdir(teste);
+   ls("/");
    printf("\n");
-   ls(teste2);
-    return 0;
+   create(teste2);
+   //ls(teste);
+   return 0;
 }
