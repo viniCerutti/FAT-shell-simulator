@@ -5,8 +5,8 @@
  - [x] load - carregar o fs do disco;
  - [x] ls - listar diretório;
  - [x] mkdir - criar diretório;
- - [ ] create - criar arquivo;
- - [ ] unlink - deletar arquivo ou diretório (deve estar vazio);
+ - [x] create - criar arquivo;
+ - [x] unlink - deletar arquivo ou diretório (deve estar vazio);
  - [ ] write 'string' - escrever dados em um arquivo (overwrite);
  - [ ] append 'string' - anexar dados em um arquivo;
  - [ ] read - ler conteúdo
