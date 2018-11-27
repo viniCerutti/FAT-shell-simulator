@@ -2,9 +2,10 @@
 #include <string.h>
 #include <stdlib.h>
 void main (){
-	char input_str[400];
 	while (1){
-		fgets (input_str, sizeof(input_str), stdin);
+        char input_str[400];
+        memset(input_str,0,sizeof(input_str));
+        fgets (input_str, sizeof(input_str), stdin);
 		//printf("%s",input_str);
 
 		if (strcmp(input_str,"init\n") == 0){
@@ -14,6 +15,13 @@ void main (){
 		}else if (strcmp(input_str,"load\n") == 0){
 
 			printf("\nfunçao load\n");
+
+        } else if (strcmp(input_str,"quit\n") == 0){
+            exit(0);
+
+        } else if (strcmp(input_str,"clear\n") == 0){
+            system("clear");
+
 		}else {
 			char * token;
 
@@ -29,7 +37,6 @@ void main (){
 			}else if (strcmp(input_str,"mkdir") == 0){
 
 				printf("\nfuncao mkdir\n");
-
 				char *path = strtok(NULL, " "); // apenas o caminho a ser utilizado
 				printf("%s",path);
 
@@ -75,7 +82,5 @@ void main (){
 				printf ("\nComando nao encontrado!\n");
 			}
 		}
-
-		
 	}
 }
