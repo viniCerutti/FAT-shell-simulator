@@ -464,7 +464,7 @@ void write(char * words, char* directories){
 				union data_cluster cluster_dir = __readCluster__(current);
 				memset(&cluster_dir,0x0000,CLUSTER_SIZE);
 				block.dir[i].first_block = current;
-
+				__writeCluster__(current,&cluster_dir);
 				int number_clusters = ceil(sizeof(words)/(CLUSTER_SIZE * 1.0));
 
 
@@ -757,11 +757,11 @@ int main()
    //init();
    load();
    char teste[7] = "/media";
-   char teste2[14] = "/media/oi.txt";
-   char teste3[5] = "casa";
+   char teste2[17] = "/media/oi.txt";
+   char teste3[6] = "amem";
    //mkdir(teste);
    //create(teste2);
    write(teste3,teste2);
-   //ls(teste);
+   ls(teste);
    return 0;
 }
