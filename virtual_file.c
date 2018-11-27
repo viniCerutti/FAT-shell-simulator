@@ -2,10 +2,11 @@
 #include <stdint.h>
 #include <string.h>
 #include <math.h>
+#include <stdlib.h>
 
 #define CLUSTER_SIZE 1024
 #define FAT_SIZE 4096
-#define ROOT_NAME "root"
+
 typedef struct{
 	uint8_t filename[18];
 	uint8_t attributes;
@@ -39,32 +40,31 @@ void init(){
 		boot_block.data[i] = 0xbb;
 	}
 
-	uint16_t fat_init[FAT_SIZE];
-
 	// alocar endereço na fat para boot block
-	fat_init[0] = 0xfffd; 
+	fat[0] = 0xfffd; 
 
 	// alocar endereço fat para a propria fat
 	for (i = 1; i <= 8; i++){
-		fat_init[i] = 0xfffe; 
+		fat[i] = 0xfffe; 
 	}
 
 	// alocar endereço na fat para root block
-	fat_init[9] = 0xffff;
+	fat[9] = 0xffff;
 
 	// para o restante dos endereços na fat
 	for (i = 10; i < FAT_SIZE; i++){
-		fat_init[i] = 0x0000; 
+		fat[i] = 0x0000; 
 	}
 
 	union data_cluster clusters;
 
 	//printf("teste");
 	fwrite(&boot_block, CLUSTER_SIZE, 1, ptr_myfile);
-	fwrite(&fat_init, sizeof(fat_init), 1, ptr_myfile);
+	fwrite(&fat, sizeof(fat), 1, ptr_myfile);
 
 	// salva no arquivos cluster root + outros clusters
 	for (i = 0; i < 4086; i++){
+		memset(&clusters,0x000,CLUSTER_SIZE);
 		fwrite(&clusters, CLUSTER_SIZE, 1, ptr_myfile);
 	}
 	fclose(ptr_myfile);
@@ -123,7 +123,11 @@ union data_cluster __readCluster__(int index){
 
 void ls (char* directories){
 	char * token;
-	token = strtok(directories,"/"); // pega o primeiro elemento apos root
+
+	char *cpy = malloc(strlen(directories)*sizeof(char)); 
+	strcpy(cpy, directories);
+
+	token = strtok(cpy,"/"); // pega o primeiro elemento apos root
 
 	union data_cluster block;
 
@@ -175,6 +179,7 @@ void ls (char* directories){
 		}
 	}
 
+	free(cpy);
 }
 
 void __writeCluster__(int index, union data_cluster *cluster){
@@ -222,11 +227,16 @@ void __writeFat__(){
 
 
 void unlink(char* directories){
+	printf("%s",directories);
+
 	char dir_copy[strlen(directories)];
 	strcpy(dir_copy,directories);
 
+	char *cpy = malloc(strlen(directories)*sizeof(char)); 
+	strcpy(cpy, directories);
+
 	char * token;
-	token = strtok(directories,"/"); // pega o primeiro elemento apos root
+	token = strtok(cpy,"/"); // pega o primeiro elemento apos root
 	
 	int index_block_fat = 0;
 
@@ -256,7 +266,7 @@ void unlink(char* directories){
 
 	// caminha nos diretórios até chegar no ultimo 
 	// no qual é o que deve ser criado
-	while( count > 1){;
+	while( count > 1) {
 		//printf("%s\n",token);
 		int i;
 		int size_dir = CLUSTER_SIZE / sizeof(dir_entry_t);
@@ -295,7 +305,6 @@ void unlink(char* directories){
 	for (i = 0; i < size_dir; i++){
 
 		if (strcmp(block.dir[i].filename, token) == 0){
-
 			if(block.dir[i].attributes == 1){
 				found_unlink = 1;
 				union data_cluster cluster_dir = __readCluster__(block.dir[i].first_block);
@@ -355,6 +364,8 @@ void unlink(char* directories){
 		printf("\nArquivo não encontrado!\n");
 		return;
 	}
+
+	free(cpy);
 }
 
 // código adaptado de https://stackoverflow.com/questions/26620388/c-substrings-c-string-slicing
@@ -371,8 +382,11 @@ void write(char * words, char* directories){
 	char dir_copy[strlen(directories)];
 	strcpy(dir_copy,directories);
 
+	char *cpy = malloc(strlen(directories)*sizeof(char)); 
+	strcpy(cpy, directories);
+
 	char * token;
-	token = strtok(directories,"/"); // pega o primeiro elemento apos root
+	token = strtok(cpy,"/"); // pega o primeiro elemento apos root
 	
 	int index_block_fat = 0;
 
@@ -531,14 +545,19 @@ void write(char * words, char* directories){
 		printf("\nArquivo não encontrado!\n");
 		return;
 	}
+	free(cpy);
 }
 
 void mkdir(char* directories){
+	printf("diretorio mkdir = %s",directories);
 	char dir_copy[strlen(directories)];
 	strcpy(dir_copy,directories);
 
+	char *cpy = malloc(strlen(directories)*sizeof(char)); 
+	strcpy(cpy, directories);
+
 	char * token;
-	token = strtok(directories,"/"); // pega o primeiro elemento apos root
+	token = strtok(cpy,"/"); // pega o primeiro elemento apos root
 	
 	int index_block_fat = 0;
 
@@ -640,14 +659,20 @@ void mkdir(char* directories){
 			break;
 		}
 	}
-
+	
+	free(cpy);
 }
 
 void create(char* directories){
     char dir_copy[strlen(directories)];
     strcpy(dir_copy,directories);
+
+    char *cpy = malloc(strlen(directories)*sizeof(char)); 
+	strcpy(cpy, directories);
+
     char * token;
-    token = strtok(directories,"/"); // pega o primeiro elemento apos root
+    token = strtok(cpy,"/"); // pega o primeiro elemento apos root
+
     int index_block_fat = 0;
     union data_cluster block;
     if (directories[0] == '/'){
@@ -728,6 +753,7 @@ void create(char* directories){
             break;
         }
     }
+    free(cpy);
 }
 
 void __loadFat__(){
@@ -754,14 +780,15 @@ void __loadFat__(){
 
 int main()
 {
-   //init();
-   load();
-   char teste[7] = "/media";
-   char teste2[17] = "/media/oi.txt";
-   char teste3[6] = "amem";
-   //mkdir(teste);
-   //create(teste2);
-   write(teste3,teste2);
-   ls(teste);
+  	char input_str[400] = "/home";
+  	char input_str3[400] = "/";
+  	char input_str2[400] = "/home/casa";
+	init();
+	load();
+	mkdir(input_str);
+	mkdir(input_str2);
+	ls(input_str3);
+
+
    return 0;
 }
