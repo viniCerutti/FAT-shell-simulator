@@ -7,6 +7,8 @@
 #define CLUSTER_SIZE 1024
 #define FAT_SIZE 4096
 
+int is_load = 0;
+
 typedef struct{
 	uint8_t filename[18];
 	uint8_t attributes;
@@ -99,6 +101,7 @@ void load (){
 	//carrega a fat para a memoria
 	fread(&fat, sizeof(fat), 1, ptr_myfile);
 
+	is_load = 1;
 	fclose(ptr_myfile);
 }
 
@@ -1269,6 +1272,7 @@ int main()
 			free(cpy);
 		}
 	}
+	
 
    return 0;
 }
