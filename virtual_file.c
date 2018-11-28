@@ -999,7 +999,7 @@ int main()
    int ch;
    int i;
 	while (1){
-
+		printf(">> ");
 		for (i = 0; (i < (sizeof(input_str)-1) &&
          ((ch = fgetc(stdin)) != EOF) && (ch != '\n')); i++){
 	 		input_str[i] = ch;
@@ -1008,9 +1008,14 @@ int main()
 			input_str[i] = '\0';
 
 		if (strcmp(input_str,"init") == 0){
-		init();
+			init();
 		}else if (strcmp(input_str,"load") == 0){
 			load();
+		} else if (strcmp(input_str,"quit") == 0){
+            exit(0);
+
+        } else if (strcmp(input_str,"clear") == 0){
+            system("clear");
 		}else {
 
 			 char *cpy = malloc(strlen(input_str)*sizeof(char)); 
