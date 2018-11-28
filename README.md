@@ -7,7 +7,7 @@
  - [x] mkdir - criar diretório;
  - [x] create - criar arquivo;
  - [x] unlink - deletar arquivo ou diretório (deve estar vazio);
- - [ ] write 'string' - escrever dados em um arquivo (overwrite);
+ - [x] write 'string' - escrever dados em um arquivo (overwrite);
  - [ ] append 'string' - anexar dados em um arquivo;
  - [ ] read - ler conteúdo
  
