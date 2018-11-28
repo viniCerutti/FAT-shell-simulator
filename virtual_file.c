@@ -479,14 +479,18 @@ void write(char * words, char* directories){
 				memset(&cluster_dir,0x0000,CLUSTER_SIZE);
 				block.dir[i].first_block = current;
 				__writeCluster__(current,&cluster_dir);
-				int number_clusters = ceil(sizeof(words)/(CLUSTER_SIZE * 1.0));
 
+				int len = strlen(words);
+
+				int number_clusters = ceil(len/(CLUSTER_SIZE * 1.0));
+				printf("words = %s",words);
+				printf("\nsizeof(words) = %ld\n",sizeof(words));
+				printf("\nnumber_clusters = %d\n",number_clusters);
 
 				//if (number_clusters == 1){
 				//	memcpy(cluster_dir.data,words,sizeof(char) * strlen(words));
 				//}
 
-				int len = strlen(words);
     			char buffer[len + 1];
 				// 
 				// enquanto verdade
@@ -503,12 +507,12 @@ void write(char * words, char* directories){
 						//	break;
 
 				while(1){
-					printf("teste");
+					printf("\nvalor i = %d", i);
 					int offset = i * CLUSTER_SIZE;
 					__slice_str__(words, buffer, offset, CLUSTER_SIZE + offset);
 
 					cluster_dir = __readCluster__(current);
-					printf("%d\n",current);
+					//printf("%d\n",current);
 					printf("%s\n",buffer);
 					memcpy(cluster_dir.data,buffer,sizeof(char) * strlen(buffer));
 					__writeCluster__(current,&cluster_dir);
@@ -780,7 +784,14 @@ void __loadFat__(){
 
 int main()
 {
-   char input_str[80];
+
+	char teste[2050] = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam est metus, euismod id lobortis id, ornare sed orci. Vivamus justo ipsum, condimentum et magna et, aliquam pulvinar purus. Sed pellentesque arcu eu lectus imperdiet imperdiet. Phasellus dolor justo, ornare interdum risus eget, fermentum dictum urna. Nam commodo tincidunt mi, id vestibulum nulla. Mauris hendrerit orci a eros sollicitudin eleifend. Integer pellentesque luctus tellus, et auctor nunc. Interdum et malesuada fames ac ante ipsum primis in faucibus. Cras quis aliquam nibh. Sed molestie metus sed pulvinar eleifend. Maecenas quam nisl, efficitur quis scelerisque ut, molestie eget ex. In hac habitasse platea dictumst. Vivamus sit amet turpis nec mi viverra consectetur et iaculis enim. Sed posuere, dui aliquam tempus sagittis, enim mi venenatis felis, at condimentum nibh ante ut orci. Nullam nec imperdiet mauris. Vestibulum quis rutrum ligula, vitae iaculis diam. Praesent pulvinar tortor a semper luctus. Pellentesque vel vestibulum lorem, ac tincidunt elit. Fusce ut bibendum enim. Aliquam vel ligula et purus imperdiet suscipit. Mauris aliquam augue ante, vel maximus enim fringilla nec. Nunc ullamcorper laoreet lectus, et lobortis dolor efficitur et. Maecenas vitae tellus eget felis bibendum elementum. Integer auctor, velit nec condimentum efficitur, lectus quam porta ex, at sollicitudin tellus nibh et ipsum. Aliquam sodales nisl at ligula condimentum, sit amet molestie neque rhoncus. Cras diam felis, feugiat a metus ut, consectetur ultrices libero. Nam mattis, enim ac vestibulum tincidunt, tellus ligula ornare mauris, at efficitur neque lectus et nibh. Proin feugiat ex quis neque feugiat consectetur at eget mauris. Nulla magna tellus, pulvinar eu bibendum a, tristique quis quam. Praesent condimentum dignissim orci. Aliquam pulvinar augue ultricies sapien gravida, quis venenatis augue dapibus. Morbi semper nulla in dictum rhoncus. Cras fringilla elementum rutrum. Sed suscipit tincidunt elementum. Vestibulum ante ipsum primis in faucibus orci nullam.";
+   	char teste2[20] = "/file.txt";
+   	char teste3[20] = "/file.txt";
+	//init();
+	load();
+	unlink(teste2);
+   /*char input_str[80];
    int ch;
    int i;
 	while (1){
@@ -792,7 +803,7 @@ int main()
 
 			input_str[i] = '\0';
 
-			if (strcmp(input_str,"init") == 0){
+		if (strcmp(input_str,"init") == 0){
 		init();
 		}else if (strcmp(input_str,"load") == 0){
 			load();
@@ -816,10 +827,32 @@ int main()
 
 				token = strtok(NULL, " "); // apenas o caminho a ser utilizado
 				mkdir(token);
+
+			}else if (strcmp(token,"create") == 0){
+				printf("create");
+				char *path = strtok(NULL, " "); // apenas o caminho a ser utilizado
+				create(path);
+
+			}else if (strcmp(token,"unlink") == 0){
+
+				char *path = strtok(NULL, " "); // apenas o caminho a ser utilizado
+				unlink(path);
+
+			}else if (strcmp(token,"write") == 0){
+
+				printf("\nfuncao write\n");
+
+				char *string = strtok(NULL, " ");
+				printf("\n%s\n",string);
+
+				char *path = strtok(NULL, " ");
+				printf("\n%s\n",path);
+				write(string,path);
 			}
 			free(cpy);
 		}
 	}
+	*/
 
 		
 
