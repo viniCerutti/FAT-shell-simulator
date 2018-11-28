@@ -8,8 +8,8 @@
  - [x] create - criar arquivo;
  - [x] unlink - deletar arquivo ou diretório (deve estar vazio);
  - [x] write 'string' - escrever dados em um arquivo (overwrite);
- - [ ] append 'string' - anexar dados em um arquivo;
- - [ ] read - ler conteúdo
+ - [x] append 'string' - anexar dados em um arquivo;
+ - [x] read - ler conteúdo
  
 ###### Formato dos comandos:
 * init
