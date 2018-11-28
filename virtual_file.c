@@ -305,6 +305,206 @@ void __writeFat__(){
 	fclose(ptr_myfile);
 }
 
+// código adaptado de https://stackoverflow.com/questions/26620388/c-substrings-c-string-slicing
+void __slice_str__(char * str, char * buffer, int start, int end)
+{
+    int j = 0;
+    for ( int i = start; i < end; i++ ) {
+        buffer[j++] = str[i];
+    }
+    buffer[j] = 0;
+}
+
+void append(char * words, char* directories){
+	char dir_copy[strlen(directories)];
+	strcpy(dir_copy,directories);
+
+	char *cpy = malloc(strlen(directories)*sizeof(char)); 
+	strcpy(cpy, directories);
+
+	char * token;
+	token = strtok(cpy,"/"); // pega o primeiro elemento apos root
+	
+	int index_block_fat = 0;
+
+	union data_cluster block;
+
+	if (directories[0] == '/'){
+		index_block_fat = 9;
+		block = __readCluster__(9);
+	}else{
+		printf("Caminho não possui diretório root!");
+		return;
+	}
+	
+	int count = 0;
+
+	// conta quantos direitorios há na string
+	while(token != NULL){
+		//printf("%s\n",token);
+		token = strtok(NULL,"/"); 
+		count++;
+	}
+
+	//printf("\n");
+	token = strtok(dir_copy,"/");
+	//printf("casa");
+	//printf("count = %d", count);
+
+	// caminha nos diretórios até chegar no ultimo 
+	// no qual é o que deve ser criado
+	while( count > 1){;
+		//printf("%s\n",token);
+		int i;
+		int size_dir = CLUSTER_SIZE / sizeof(dir_entry_t);
+		int found_dir = 0;
+
+		// procura o diretorio atual no anterior
+		for (i = 0; i < size_dir; i ++){
+
+			if (strcmp(block.dir[i].filename,token) == 0){
+				found_dir = 1;
+				if(block.dir[i].attributes == 1){
+					index_block_fat = block.dir[i].first_block;
+					block = __readCluster__(block.dir[i].first_block);
+				}else{
+					printf("%s não é um diretório!\n",token);
+				}
+				break;
+			}
+		}
+
+		if (!found_dir){
+			printf("Não existe este diretório %s\n",token);
+			return;
+		}
+
+		token = strtok(NULL,"/"); 
+		count--;
+	}
+
+	int size_dir = CLUSTER_SIZE / sizeof(dir_entry_t);
+	int i;
+	int found_unlink = 0;
+	// tendo o diretorio no qual queremos criar o novo (token)
+	// basta verificar se nao existe um aqruivo com este mesmo nome
+	// verificar se possui um bloco livre no diretório e na fat
+	for (i = 0; i < size_dir; i++){
+
+		if (strcmp(block.dir[i].filename, token) == 0){
+
+			if(block.dir[i].attributes == 0){
+				printf("Hello world!");
+				found_unlink = 1;
+
+
+				uint16_t current = block.dir[i].first_block;
+				printf("%d",current);
+				uint16_t temp = block.dir[i].first_block;
+
+				int len = strlen(words);
+
+				block.dir[i].size += len;
+				__resize__(directories,len);
+
+    			char buffer[len + 1];
+
+    			int count_letters = 0;
+    			
+    			// chego no cluster final
+				// de i = 0 a 1024:
+					// se 0x000 == cluster.data[j]
+					// então data.cluter[j] = words[i]
+
+    			// procura o último cluster do arquivo
+    			while (fat[current] != 0xffff){
+					union data_cluster cluster_dir = __readCluster__(current);
+					current = fat[current];
+				}
+
+				union data_cluster cluster_dir = __readCluster__(current);
+				int j;
+					for (j = 0; j < CLUSTER_SIZE; j ++){
+						if (count_letters >= len){break;}
+						if (cluster_dir.data[j] == 0x0000){
+							cluster_dir.data[j] = words[count_letters];
+							count_letters++;
+						}
+					}
+				__writeCluster__(current,&cluster_dir);
+				// realizo um __slice_str__ (words, buffer, i, strlen(wrods))
+				printf("count_letters = %d",count_letters);
+
+				if (count_letters == strlen(words)){
+					__writeCluster__(index_block_fat,&block);
+					__writeFat__();
+					return;
+				}
+
+				__slice_str__(words, buffer, count_letters, strlen(words));
+				printf("buffer = %s",buffer);
+				printf("\npos final cluster %s\n", buffer);
+				strcpy(words,buffer);
+				printf("\n words cluster %s\n", words);
+				len = strlen(words);
+				printf("len = %d",len);
+				int number_clusters = ceil(len/(CLUSTER_SIZE * 1.0));
+
+				uint16_t final_cluster = current;
+				current = __findFreeSpaceFat__();
+				fat[final_cluster] = current;
+				//aaaaaaaaaaaaaaaaaaaaaaaaaaaa bbbbbbbbbbbb
+				// words = bbbbbbbbbbbb
+				// len = strlen(words)
+				// int number_clusters = ceil(len/(CLUSTER_SIZE * 1.0));
+				// current  = __findFreeSpaceFat__();
+				// fat[posicao_final_cluster] = current
+
+				while(1){
+					printf("\nvalor i = %d", i);
+					int offset = i * CLUSTER_SIZE;
+					__slice_str__(words, buffer, offset, CLUSTER_SIZE + offset);
+
+					cluster_dir = __readCluster__(current);
+					//printf("%d\n",current);
+					printf("%s\n",buffer);
+					memcpy(cluster_dir.data,buffer,sizeof(char) * strlen(buffer));
+					__writeCluster__(current,&cluster_dir);
+
+					fat[current] = 0xffff;
+					i++;
+
+					if (i < number_clusters){
+						int next_index_fat = __findFreeSpaceFat__();
+
+						if( next_index_fat == -1 ){
+							printf("\nFat não possui espaço vazio!\n");
+							return;
+						}
+
+						fat[current] = next_index_fat;
+						current = next_index_fat;
+
+					}else{
+						break;
+					}
+				}
+
+				__writeCluster__(index_block_fat,&block);
+				__writeFat__();
+				break;
+			}
+				
+		}
+		
+	}
+
+	if(!found_unlink){
+		printf("\nArquivo não encontrado!\n");
+		return;
+	}
+	free(cpy);
+}
 
 void read(char* directories){
 	printf("read == %s",directories);
@@ -427,6 +627,7 @@ void read(char* directories){
 
 	free(cpy);
 }
+
 
 
 void unlink(char* directories){
@@ -575,15 +776,6 @@ void unlink(char* directories){
 	free(cpy);
 }
 
-// código adaptado de https://stackoverflow.com/questions/26620388/c-substrings-c-string-slicing
-void __slice_str__(char * str, char * buffer, int start, int end)
-{
-    int j = 0;
-    for ( int i = start; i < end; i++ ) {
-        buffer[j++] = str[i];
-    }
-    buffer[j] = 0;
-}
 
 void write(char * words, char* directories){
 	char dir_copy[strlen(directories)];
@@ -994,7 +1186,6 @@ void __loadFat__(){
 
 int main()
 {
-
    char input_str[80];
    int ch;
    int i;
@@ -1058,6 +1249,17 @@ int main()
 				printf("\n%s\n",path);
 				write(string,path);
 
+			}else if (strcmp(token,"append") == 0){
+
+				printf("\nfuncao append\n");
+
+				char *string = strtok(NULL, " ");
+				printf("\n%s\n",string);
+
+				char *path = strtok(NULL, " ");
+				printf("\n%s\n",path);
+				append(string,path);
+
 			}else if (strcmp(token,"read") == 0){
 
 				char *path = strtok(NULL, " "); // apenas o caminho a ser utilizado
@@ -1067,7 +1269,6 @@ int main()
 			free(cpy);
 		}
 	}
-		
 
    return 0;
 }
