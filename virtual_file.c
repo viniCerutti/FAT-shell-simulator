@@ -121,6 +121,98 @@ union data_cluster __readCluster__(int index){
 
 }
 
+void __writeCluster__(int index, union data_cluster *cluster){
+    FILE *ptr_myfile;
+
+    ptr_myfile=fopen("fat.part","rb+");
+
+    if (!ptr_myfile){
+        printf("Impossivel abrir o arquivo!");
+        return;
+    }
+
+    fseek(ptr_myfile,(index*CLUSTER_SIZE), SEEK_SET);
+    fwrite(cluster,CLUSTER_SIZE,1,ptr_myfile);
+
+    fclose(ptr_myfile);
+}
+
+
+void __resize__(char* directories, size_t extend_size){
+	printf("%s",directories);
+
+	char dir_copy[strlen(directories)];
+	strcpy(dir_copy,directories);
+
+	char *cpy = malloc(strlen(directories)*sizeof(char)); 
+	strcpy(cpy, directories);
+
+	char * token;
+	token = strtok(cpy,"/"); // pega o primeiro elemento apos root
+	
+	int index_block_fat = 0;
+
+	union data_cluster block;
+
+	if (directories[0] == '/'){
+		index_block_fat = 9;
+		block = __readCluster__(9);
+	}else{
+		printf("Caminho não possui diretório root!");
+		return;
+	}
+	
+	int count = 0;
+
+	// conta quantos direitorios há na string
+	while(token != NULL){
+		//printf("%s\n",token);
+		token = strtok(NULL,"/"); 
+		count++;
+	}
+
+	//printf("\n");
+	token = strtok(dir_copy,"/");
+	//printf("casa");
+	//printf("count = %d", count);
+
+	// caminha nos diretórios até chegar no ultimo 
+	// no qual é o que deve ser criado
+	while( count > 1) {
+		printf("%s\n",token);
+		int i;
+		int size_dir = CLUSTER_SIZE / sizeof(dir_entry_t);
+		int found_dir = 0;
+
+		// procura o diretorio atual no anterior
+		for (i = 0; i < size_dir; i ++){
+
+			if (strcmp(block.dir[i].filename,token) == 0){
+				found_dir = 1;
+				if(block.dir[i].attributes == 1){
+
+					block.dir[i].size += extend_size;
+					__writeCluster__(index_block_fat,&block);
+					block = __readCluster__(block.dir[i].first_block);
+					index_block_fat = block.dir[i].first_block;
+
+				}else{
+					printf("%s não é um diretório!\n",token);
+				}
+				break;
+			}
+		}
+
+		if (!found_dir){
+			printf("Não existe este diretório %s\n",token);
+			return;
+		}
+
+		token = strtok(NULL,"/"); 
+		count--;
+	}
+}
+
 void ls (char* directories){
 	char * token;
 
@@ -173,30 +265,17 @@ void ls (char* directories){
 
 	int i;
 	int size_dir = CLUSTER_SIZE / sizeof(dir_entry_t);
+	printf("\n");
 	for (i = 0; i < size_dir; i ++){
 		if(block.dir[i].first_block != 0){
-			printf("%s\n",block.dir[i].filename);
+			printf("%s \n",block.dir[i].filename);
 		}
 	}
 
 	free(cpy);
 }
 
-void __writeCluster__(int index, union data_cluster *cluster){
-    FILE *ptr_myfile;
 
-    ptr_myfile=fopen("fat.part","rb+");
-
-    if (!ptr_myfile){
-        printf("Impossivel abrir o arquivo!");
-        return;
-    }
-
-    fseek(ptr_myfile,(index*CLUSTER_SIZE), SEEK_SET);
-    fwrite(cluster,CLUSTER_SIZE,1,ptr_myfile);
-
-    fclose(ptr_myfile);
-}
 
 int __findFreeSpaceFat__(){
 	int i;
@@ -224,6 +303,8 @@ void __writeFat__(){
 
 	fclose(ptr_myfile);
 }
+
+
 
 
 void unlink(char* directories){
@@ -323,6 +404,8 @@ void unlink(char* directories){
 				__writeCluster__(block.dir[i].first_block,&cluster_dir);
 				memset(&block.dir[i],0x0000,sizeof(dir_entry_t));
 
+				__resize__(directories,-block.dir[i].size);
+
 				__writeCluster__(index_block_fat,&block);
 				__writeFat__();
 				break;
@@ -349,6 +432,8 @@ void unlink(char* directories){
 				memset(&cluster_dir,0x0000,CLUSTER_SIZE);
 				__writeCluster__(current,&cluster_dir);
 				fat[current] = 0x0000;
+
+				__resize__(directories,-block.dir[i].size);
 
 				memset(&block.dir[i],0x0000,sizeof(dir_entry_t));
 				__writeCluster__(index_block_fat,&block);
@@ -481,6 +566,9 @@ void write(char * words, char* directories){
 				__writeCluster__(current,&cluster_dir);
 
 				int len = strlen(words);
+
+				block.dir[i].size = len;
+				__resize__(directories,len);
 
 				int number_clusters = ceil(len/(CLUSTER_SIZE * 1.0));
 				printf("words = %s",words);
@@ -784,14 +872,7 @@ void __loadFat__(){
 
 int main()
 {
-
-	char teste[2050] = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam est metus, euismod id lobortis id, ornare sed orci. Vivamus justo ipsum, condimentum et magna et, aliquam pulvinar purus. Sed pellentesque arcu eu lectus imperdiet imperdiet. Phasellus dolor justo, ornare interdum risus eget, fermentum dictum urna. Nam commodo tincidunt mi, id vestibulum nulla. Mauris hendrerit orci a eros sollicitudin eleifend. Integer pellentesque luctus tellus, et auctor nunc. Interdum et malesuada fames ac ante ipsum primis in faucibus. Cras quis aliquam nibh. Sed molestie metus sed pulvinar eleifend. Maecenas quam nisl, efficitur quis scelerisque ut, molestie eget ex. In hac habitasse platea dictumst. Vivamus sit amet turpis nec mi viverra consectetur et iaculis enim. Sed posuere, dui aliquam tempus sagittis, enim mi venenatis felis, at condimentum nibh ante ut orci. Nullam nec imperdiet mauris. Vestibulum quis rutrum ligula, vitae iaculis diam. Praesent pulvinar tortor a semper luctus. Pellentesque vel vestibulum lorem, ac tincidunt elit. Fusce ut bibendum enim. Aliquam vel ligula et purus imperdiet suscipit. Mauris aliquam augue ante, vel maximus enim fringilla nec. Nunc ullamcorper laoreet lectus, et lobortis dolor efficitur et. Maecenas vitae tellus eget felis bibendum elementum. Integer auctor, velit nec condimentum efficitur, lectus quam porta ex, at sollicitudin tellus nibh et ipsum. Aliquam sodales nisl at ligula condimentum, sit amet molestie neque rhoncus. Cras diam felis, feugiat a metus ut, consectetur ultrices libero. Nam mattis, enim ac vestibulum tincidunt, tellus ligula ornare mauris, at efficitur neque lectus et nibh. Proin feugiat ex quis neque feugiat consectetur at eget mauris. Nulla magna tellus, pulvinar eu bibendum a, tristique quis quam. Praesent condimentum dignissim orci. Aliquam pulvinar augue ultricies sapien gravida, quis venenatis augue dapibus. Morbi semper nulla in dictum rhoncus. Cras fringilla elementum rutrum. Sed suscipit tincidunt elementum. Vestibulum ante ipsum primis in faucibus orci nullam.";
-   	char teste2[20] = "/file.txt";
-   	char teste3[20] = "/file.txt";
-	//init();
-	load();
-	unlink(teste2);
-   /*char input_str[80];
+   char input_str[80];
    int ch;
    int i;
 	while (1){
@@ -852,7 +933,7 @@ int main()
 			free(cpy);
 		}
 	}
-	*/
+
 
 		
 
