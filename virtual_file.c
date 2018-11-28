@@ -780,15 +780,48 @@ void __loadFat__(){
 
 int main()
 {
-  	char input_str[400] = "/home";
-  	char input_str3[400] = "/";
-  	char input_str2[400] = "/home/casa";
-	init();
-	load();
-	mkdir(input_str);
-	mkdir(input_str2);
-	ls(input_str3);
+   char input_str[80];
+   int ch;
+   int i;
+	while (1){
 
+		for (i = 0; (i < (sizeof(input_str)-1) &&
+         ((ch = fgetc(stdin)) != EOF) && (ch != '\n')); i++){
+	 		input_str[i] = ch;
+	 	}
+
+			input_str[i] = '\0';
+
+			if (strcmp(input_str,"init") == 0){
+		init();
+		}else if (strcmp(input_str,"load") == 0){
+			load();
+		}else {
+
+			 char *cpy = malloc(strlen(input_str)*sizeof(char)); 
+			 strcpy(cpy, input_str);
+
+			char * token;
+
+			token = strtok(cpy," "); // pega a primeira palavra  antes do espaço
+
+			if(strcmp(token,"ls") == 0){
+
+				token = strtok(NULL, " "); // apenas o caminho a ser utilizado
+				char *teste = malloc(strlen(token)*sizeof(char)); 
+				memcpy(teste,token,strlen(token)*sizeof(char));
+				ls(token);
+
+			}else if (strcmp(token,"mkdir") == 0){
+
+				token = strtok(NULL, " "); // apenas o caminho a ser utilizado
+				mkdir(token);
+			}
+			free(cpy);
+		}
+	}
+
+		
 
    return 0;
 }
