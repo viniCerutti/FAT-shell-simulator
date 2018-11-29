@@ -1,30 +1,40 @@
 # T2-Sisop 
+Este trabalho é uma implementação de um simulador de um sistema de arquivos simples baseado em tabela de alocação de 16 bits (FAT) e um shell usado para realizar operações sobre este sistema de arquivos.
 
-## To-Do:
- - [x] init - inicializar o fs com as estruturas de dados, format;
- - [x] load - carregar o fs do disco;
- - [x] ls - listar diretório;
- - [x] mkdir - criar diretório;
- - [x] create - criar arquivo;
- - [x] unlink - deletar arquivo ou diretório (deve estar vazio);
- - [x] write 'string' - escrever dados em um arquivo (overwrite);
- - [x] append 'string' - anexar dados em um arquivo;
- - [x] read - ler conteúdo
+# Comandos Interpreatados #
+* init - inicializar o fs com as estruturas de dados, format;
+* load - carregar o fs do disco;
+* ls - listar diretório;
+* mkdir - criar diretório;
+* create - criar arquivo;
+* unlink - deletar arquivo ou diretório (deve estar vazio);
+* write 'string' - escrever dados em um arquivo (overwrite);
+* append 'string' - anexar dados em um arquivo;
+* read - ler conteúdo
  
-###### Formato dos comandos:
+## Formato dos comandos: ##
 * init
 * load
 * ls        /caminho/diretorio 
 * mkdir     /caminho/diretorio
 * create    /caminho/arquivo
 * unlink    /caminho/{arquivo|diretorio}
-* write     /caminho/arquivo
-* append    /caminho/arquivo
+* write    "string" /caminho/arquivo
+* append   "string" /caminho/arquivo
 * read      /caminho/arquivo
 
+# Modo de compilar #
+```
+gcc -o virtual_file virtual_file.c -lm 
+```
 
+# Sistema operacional testado #
 
-### Material Extra
+Linux Ubuntu 16.04.5 LTS
+
+gcc (Ubuntu 6.4.0-17ubuntu1~16.04) 6.4.0 20180424  
+
+### Material Extra de Apoio ###
 http://www.cse.scu.edu/~tschwarz/COEN252_09/Lectures/FAT.html?fbclid=IwAR15vgsRT1pJIwcxH_zxEHECgjoRbQVzDQVjXHfDSK-mn191JlsFq8krpVg
 
 http://www.c-jump.com/CIS24/Slides/FAT/lecture.html?fbclid=IwAR3jkxH2PcFh1PCmToYUcGICjPjmdRh41SzNoj1H7gazDwSEMVR_x12ZKn4
