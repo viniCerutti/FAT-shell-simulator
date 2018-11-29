@@ -1,3 +1,5 @@
+// Autores Vinicius Cerutti & Yuri Bittencourt
+
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
@@ -7,8 +9,9 @@
 #define CLUSTER_SIZE 1024
 #define FAT_SIZE 4096
 
-int is_load = 0;
-
+// --------------------------
+// estruturas de dados
+// --------------------------
 typedef struct{
 	uint8_t filename[18];
 	uint8_t attributes;
@@ -23,6 +26,10 @@ union data_cluster{
 };
 
 uint16_t fat[FAT_SIZE];
+
+// --------------------------
+// funções auxiliares
+// --------------------------
 
 union data_cluster __readCluster__(int index){
 	FILE *ptr_myfile;
@@ -165,6 +172,9 @@ void __resize__(char* directories, size_t extend_size){
 	}
 }
 
+// --------------------------
+// funções utilizadas no shell, no qual simulam uma fat
+// --------------------------
 void init(){
 
 	FILE *ptr_myfile;
@@ -240,7 +250,6 @@ void load (){
 	//carrega a fat para a memoria
 	fread(&fat, sizeof(fat), 1, ptr_myfile);
 
-	is_load = 1;
 	fclose(ptr_myfile);
 }
 
@@ -1069,6 +1078,44 @@ void read(char* directories){
 	free(cpy);
 }
 
+void help(){
+
+	printf("Descrição dos comandos:\n");
+
+	printf("init - inicializar o fs com as estruturas de dados, format;\n");
+	printf("\tinit\n\n");
+
+	printf("load - carregar o fs do disco;\n");
+	printf("\tload\n\n");
+
+	printf("ls - listar diretório;\n");
+	printf("\tls /caminho/diretorio\n\n");
+
+	printf("mkdir - criar diretório;\n");
+	printf("\tmkdir /caminho/diretorio\n\n");
+
+	printf("create - criar arquivo;\n");
+	printf("\tcreate /caminho/arquivo\n\n");
+
+	printf("unlink - deletar arquivo ou diretório (deve estar vazio);\n");
+	printf("\tunlink /caminho/{arquivo|diretorio}\n\n");
+
+	printf("write 'string' - escrever dados em um arquivo (overwrite);\n");
+	printf("\twrite \"string\" /caminho/arquivo\n\n");
+
+	printf("append 'string' - anexar dados em um arquivo;\n");
+	printf("\tappend \"string\" /caminho/arquivo\n\n");
+
+	printf("read - ler conteúdo\n");
+	printf("\tread /caminho/arquivo\n\n");
+
+	printf("clear - limpar o terminal;\n");
+	printf("\tclear\n\n");
+
+	printf("exit - sair do terminal;\n");
+	printf("\texit\n\n");
+}
+
 int main()
 {
    system("clear");
@@ -1094,7 +1141,8 @@ int main()
 
         }else if (strcmp(input_str,"clear") == 0){
             system("clear");
-
+        }else if (strcmp(input_str,"help") == 0){
+            help(); 
 		}else if (strstr(input_str, "\"") != NULL) {
 			char *cpy = malloc(strlen(input_str)*sizeof(char)); 
 			 strcpy(cpy, input_str);
