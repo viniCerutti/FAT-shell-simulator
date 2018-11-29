@@ -24,6 +24,147 @@ union data_cluster{
 
 uint16_t fat[FAT_SIZE];
 
+union data_cluster __readCluster__(int index){
+	FILE *ptr_myfile;
+
+	ptr_myfile=fopen("fat.part","rb");
+	union data_cluster cluster;
+
+	if (!ptr_myfile){
+		printf("Impossivel abrir o arquivo!\n");
+		return cluster;
+	}
+
+	fseek(ptr_myfile,( CLUSTER_SIZE * index), SEEK_SET);
+	fread(&cluster,sizeof(union data_cluster),1,ptr_myfile);
+
+	fclose(ptr_myfile);
+
+	return cluster;
+}
+
+void __writeCluster__(int index, union data_cluster *cluster){
+    FILE *ptr_myfile;
+
+    ptr_myfile=fopen("fat.part","rb+");
+
+    if (!ptr_myfile){
+        printf("Impossivel abrir o arquivo!\n");
+        return;
+    }
+
+    fseek(ptr_myfile,(index*CLUSTER_SIZE), SEEK_SET);
+    fwrite(cluster,CLUSTER_SIZE,1,ptr_myfile);
+
+    fclose(ptr_myfile);
+}
+
+int __findFreeSpaceFat__(){
+	int i;
+	for (i = 0; i < FAT_SIZE; i++){
+		 if (fat[i] == 0){
+		 	return i;
+		 }
+	}
+
+	return -1;
+}
+
+void __writeFat__(){
+	FILE *ptr_myfile;
+
+	ptr_myfile=fopen("fat.part","rb+");
+
+	if (!ptr_myfile){
+	    printf("Impossivel abrir o arquivo!\n");
+	    return;
+	}
+
+	fseek(ptr_myfile,(CLUSTER_SIZE), SEEK_SET);
+	fwrite(&fat,FAT_SIZE,1,ptr_myfile);
+
+	fclose(ptr_myfile);
+}
+
+// código adaptado de https://stackoverflow.com/a/26620524
+void __slice_str__(char * str, char * buffer, int start, int end)
+{
+    int j = 0;
+    for ( int i = start; i < end; i++ ) {
+        buffer[j++] = str[i];
+    }
+    buffer[j] = 0;
+}
+
+void __resize__(char* directories, size_t extend_size){
+
+	char dir_copy[strlen(directories)];
+	strcpy(dir_copy,directories);
+
+	char *cpy = malloc(strlen(directories)*sizeof(char)); 
+	strcpy(cpy, directories);
+
+	char * token;
+	token = strtok(cpy,"/"); // pega o primeiro elemento apos root
+	
+	int index_block_fat = 0;
+
+	union data_cluster block;
+
+	if (directories[0] == '/'){
+		index_block_fat = 9;
+		block = __readCluster__(9);
+	}else{
+		printf("Caminho não possui diretório root!\n");
+		return;
+	}
+	
+	int count = 0;
+
+	// conta quantos direitorios há na string
+	while(token != NULL){
+		token = strtok(NULL,"/"); 
+		count++;
+	}
+
+	token = strtok(dir_copy,"/");
+
+	// caminha nos diretórios até chegar no penúltimo,
+    //  pois o último é o arquivo que deve ser utilizado
+	while( count > 1) {
+		int i;
+		int size_dir = CLUSTER_SIZE / sizeof(dir_entry_t);
+		int found_dir = 0;
+
+		// procura o diretorio atual no anterior
+		for (i = 0; i < size_dir; i ++){
+
+			if (strcmp(block.dir[i].filename,token) == 0){
+				found_dir = 1;
+				if(block.dir[i].attributes == 1){
+
+					block.dir[i].size += extend_size;
+					__writeCluster__(index_block_fat,&block);
+					block = __readCluster__(block.dir[i].first_block);
+					index_block_fat = block.dir[i].first_block;
+
+				}else{
+					printf("%s não é um diretório!\n",token);
+				}
+				break;
+			}
+		}
+
+		if (!found_dir){
+			printf("Não existe este diretório %s\n",token);
+			return;
+		}
+
+		token = strtok(NULL,"/"); 
+		count--;
+	}
+}
+
 void init(){
 
 	FILE *ptr_myfile;
@@ -103,111 +244,6 @@ void load (){
 	fclose(ptr_myfile);
 }
 
-union data_cluster __readCluster__(int index){
-	FILE *ptr_myfile;
-
-	ptr_myfile=fopen("fat.part","rb");
-	union data_cluster cluster;
-
-	if (!ptr_myfile){
-		printf("Impossivel abrir o arquivo!\n");
-		return cluster;
-	}
-
-	fseek(ptr_myfile,( CLUSTER_SIZE * index), SEEK_SET);
-	fread(&cluster,sizeof(union data_cluster),1,ptr_myfile);
-
-	fclose(ptr_myfile);
-
-	return cluster;
-}
-
-void __writeCluster__(int index, union data_cluster *cluster){
-    FILE *ptr_myfile;
-
-    ptr_myfile=fopen("fat.part","rb+");
-
-    if (!ptr_myfile){
-        printf("Impossivel abrir o arquivo!\n");
-        return;
-    }
-
-    fseek(ptr_myfile,(index*CLUSTER_SIZE), SEEK_SET);
-    fwrite(cluster,CLUSTER_SIZE,1,ptr_myfile);
-
-    fclose(ptr_myfile);
-}
-
-
-void __resize__(char* directories, size_t extend_size){
-
-	char dir_copy[strlen(directories)];
-	strcpy(dir_copy,directories);
-
-	char *cpy = malloc(strlen(directories)*sizeof(char)); 
-	strcpy(cpy, directories);
-
-	char * token;
-	token = strtok(cpy,"/"); // pega o primeiro elemento apos root
-	
-	int index_block_fat = 0;
-
-	union data_cluster block;
-
-	if (directories[0] == '/'){
-		index_block_fat = 9;
-		block = __readCluster__(9);
-	}else{
-		printf("Caminho não possui diretório root!\n");
-		return;
-	}
-	
-	int count = 0;
-
-	// conta quantos direitorios há na string
-	while(token != NULL){
-		token = strtok(NULL,"/"); 
-		count++;
-	}
-
-	token = strtok(dir_copy,"/");
-
-	// caminha nos diretórios até chegar no ultimo 
-	// no qual é o que deve ser criado
-	while( count > 1) {
-		int i;
-		int size_dir = CLUSTER_SIZE / sizeof(dir_entry_t);
-		int found_dir = 0;
-
-		// procura o diretorio atual no anterior
-		for (i = 0; i < size_dir; i ++){
-
-			if (strcmp(block.dir[i].filename,token) == 0){
-				found_dir = 1;
-				if(block.dir[i].attributes == 1){
-
-					block.dir[i].size += extend_size;
-					__writeCluster__(index_block_fat,&block);
-					block = __readCluster__(block.dir[i].first_block);
-					index_block_fat = block.dir[i].first_block;
-
-				}else{
-					printf("%s não é um diretório!\n",token);
-				}
-				break;
-			}
-		}
-
-		if (!found_dir){
-			printf("Não existe este diretório %s\n",token);
-			return;
-		}
-
-		token = strtok(NULL,"/"); 
-		count--;
-	}
-}
-
 void ls (char* directories){
 	char * token;
 
@@ -268,42 +304,484 @@ void ls (char* directories){
 	free(cpy);
 }
 
-int __findFreeSpaceFat__(){
+void mkdir(char* directories){
+	char dir_copy[strlen(directories)];
+	strcpy(dir_copy,directories);
+
+	char *cpy = malloc(strlen(directories)*sizeof(char)); 
+	strcpy(cpy, directories);
+
+	char * token;
+	token = strtok(cpy,"/"); // pega o primeiro elemento apos root
+	
+	int index_block_fat = 0;
+
+	union data_cluster block;
+
+	if (directories[0] == '/'){
+		index_block_fat = 9;
+		block = __readCluster__(9);
+	}else{
+		printf("Caminho não possui diretório root!\n");
+		return;
+	}
+	
+	int count = 0;
+
+	// conta quantos direitorios há na string
+	while(token != NULL){
+		token = strtok(NULL,"/"); 
+		count++;
+	}
+
+	token = strtok(dir_copy,"/");
+
+	// caminha nos diretórios até chegar no penúltimo,
+    //  pois o último é o arquivo que deve ser criado
+	while( count > 1){;
+		int i;
+		int size_dir = CLUSTER_SIZE / sizeof(dir_entry_t);
+		int found_dir = 0;
+
+		// procura o diretorio atual no anterior
+		for (i = 0; i < size_dir; i ++){
+
+			if (strcmp(block.dir[i].filename,token) == 0){
+				found_dir = 1;
+				if(block.dir[i].attributes == 1){
+					index_block_fat = block.dir[i].first_block;
+					block = __readCluster__(block.dir[i].first_block);
+				}else{
+					printf("%s não é um diretório!\n",token);
+				}
+				break;
+			}
+		}
+
+		if (!found_dir){
+			printf("Não existe este diretório %s\n",token);
+			return;
+		}
+
+		token = strtok(NULL,"/"); 
+		count--;
+	}
+
+	int size_dir = CLUSTER_SIZE / sizeof(dir_entry_t);
 	int i;
-	for (i = 0; i < FAT_SIZE; i++){
-		 if (fat[i] == 0){
-		 	return i;
-		 }
-	}
 
-	return -1;
+	// tendo o diretorio no qual queremos criar o novo (token)
+	// basta verificar se nao existe um arquivo com este mesmo nome
+	// verificar se possui um bloco livre no diretório e na fat
+	for (i = 0; i < size_dir; i++){
+
+		if (strcmp(block.dir[i].filename, token) == 0){
+			printf("Já possui uma entrada neste diretório com este mesmo nome!\n");
+				return;
+		}
+
+		if (block.dir[i].first_block == 0){
+			
+			int index_fat = __findFreeSpaceFat__();
+
+			if(index_fat == -1 ){
+				printf("Fat não possui espaço vazio!\n");
+				return;
+			}
+
+			fat[index_fat] = 0xffff;
+			dir_entry_t new_dir;
+			// limpa o novo diretorio a ser criado (apaga os lixos da memoria)
+
+			memset(&new_dir,0x0000,sizeof(dir_entry_t));
+			memcpy(new_dir.filename,token,sizeof(char) * strlen(token));
+			new_dir.attributes = 1;
+			new_dir.first_block = index_fat;
+			new_dir.size = 0;
+
+			// salva este novo diretorio no bloco do pai
+			block.dir[i] = new_dir;
+			__writeCluster__(index_block_fat,&block);
+			__writeFat__();
+			break;
+		}
+	}
+	
+	free(cpy);
 }
 
-void __writeFat__(){
-	FILE *ptr_myfile;
 
-	ptr_myfile=fopen("fat.part","rb+");
+void create(char* directories){
+    char dir_copy[strlen(directories)];
+    strcpy(dir_copy,directories);
 
-	if (!ptr_myfile){
-	    printf("Impossivel abrir o arquivo!\n");
-	    return;
-	}
+    char *cpy = malloc(strlen(directories)*sizeof(char)); 
+	strcpy(cpy, directories);
 
-	fseek(ptr_myfile,(CLUSTER_SIZE), SEEK_SET);
-	fwrite(&fat,FAT_SIZE,1,ptr_myfile);
+    char * token;
+    token = strtok(cpy,"/"); // pega o primeiro elemento apos root
 
-	fclose(ptr_myfile);
-}
-
-// código adaptado de https://stackoverflow.com/questions/26620388/c-substrings-c-string-slicing
-void __slice_str__(char * str, char * buffer, int start, int end)
-{
-    int j = 0;
-    for ( int i = start; i < end; i++ ) {
-        buffer[j++] = str[i];
+    int index_block_fat = 0;
+    union data_cluster block;
+    if (directories[0] == '/'){
+        index_block_fat = 9;
+        block = __readCluster__(9);
+    }else{
+        printf("Caminho não possui diretório root!\n");
+        return;
     }
-    buffer[j] = 0;
+    int count = 0;
+    // conta quantos direitorios há na string 
+    while(token != NULL){
+        token = strtok(NULL,"/");
+        count++;
+    }
+    token = strtok(dir_copy,"/");
+    // caminha nos diretórios até chegar no penúltimo,
+    //  pois o último é o arquivo que deve ser criado
+    while( count > 1){;
+        int i;
+        int size_dir = CLUSTER_SIZE / sizeof(dir_entry_t);
+        int found_dir = 0;
+        // procura o diretorio atual no anterior
+        for (i = 0; i < size_dir; i ++){
+            if (strcmp(block.dir[i].filename,token) == 0){
+                found_dir = 1;
+                if(block.dir[i].attributes == 1){
+                    index_block_fat = block.dir[i].first_block;
+                    block = __readCluster__(block.dir[i].first_block);
+                }else{
+                    printf("%s não é um diretório!\n",token);
+                }
+                break;
+            }
+        }
+        if (!found_dir){
+            printf("Não existe este diretório %s\n",token);
+            return;
+        }
+        token = strtok(NULL,"/");
+        count--;
+    }
+    int size_dir = CLUSTER_SIZE / sizeof(dir_entry_t);
+    int i;
+    // tendo o diretorio no qual queremos criar o novo arquivo (token)
+    // basta verificar se nao existe um arquivo com este mesmo nome
+    // verificar se possui um bloco livre no diretório e na fat
+    for (i = 0; i < size_dir; i++){
+        if (strcmp(block.dir[i].filename, token) == 0){
+            printf("Já possui uma entrada neste diretório com este mesmo nome!\n");
+            return;
+        }
+        if (block.dir[i].first_block == 0){
+            int index_fat = __findFreeSpaceFat__();
+            if(index_fat == -1 ){
+                printf("Fat não possui espaço vazio!\n");
+                return;
+            }
+            fat[index_fat] = 0xffff;
+            dir_entry_t new_arq;
+            // limpa o novo arquivo a ser criado (apaga os lixos da memoria)
+            memset(&new_arq,0x0000,sizeof(dir_entry_t));
+            memcpy(new_arq.filename,token,sizeof(char) * strlen(token));
+            new_arq.attributes = 0;
+            new_arq.first_block = index_fat;
+            new_arq.size = 0;
+            // salva este novo arquivo no bloco do pai
+            block.dir[i] = new_arq;
+            __writeCluster__(index_block_fat,&block);
+            __writeFat__();
+            break;
+        }
+    }
+    free(cpy);
 }
+
+void unlink(char* directories){
+
+	char dir_copy[strlen(directories)];
+	strcpy(dir_copy,directories);
+
+	char *cpy = malloc(strlen(directories)*sizeof(char)); 
+	strcpy(cpy, directories);
+
+	char * token;
+	token = strtok(cpy,"/"); // pega o primeiro elemento apos root
+	
+	int index_block_fat = 0;
+
+	union data_cluster block;
+
+	if (directories[0] == '/'){
+		index_block_fat = 9;
+		block = __readCluster__(9);
+	}else{
+		printf("Caminho não possui diretório root!\n");
+		return;
+	}
+	
+	int count = 0;
+
+	// conta quantos direitorios há na string
+	while(token != NULL){
+		token = strtok(NULL,"/"); 
+		count++;
+	}
+
+	token = strtok(dir_copy,"/");
+
+	// caminha nos diretórios até chegar no penúltimo,
+    //  pois o último é o arquivo que deve ser removido
+	while( count > 1) {
+		int i;
+		int size_dir = CLUSTER_SIZE / sizeof(dir_entry_t);
+		int found_dir = 0;
+
+		// procura o diretorio atual no anterior
+		for (i = 0; i < size_dir; i ++){
+
+			if (strcmp(block.dir[i].filename,token) == 0){
+				found_dir = 1;
+				if(block.dir[i].attributes == 1){
+					index_block_fat = block.dir[i].first_block;
+					block = __readCluster__(block.dir[i].first_block);
+				}else{
+					printf("%s não é um diretório!\n",token);
+				}
+				break;
+			}
+		}
+
+		if (!found_dir){
+			printf("Não existe este diretório %s\n",token);
+			return;
+		}
+
+		token = strtok(NULL,"/"); 
+		count--;
+	}
+
+	int size_dir = CLUSTER_SIZE / sizeof(dir_entry_t);
+	int i;
+	int found_unlink = 0;
+	// tendo o diretorio no qual queremos criar o novo (token)
+	// basta verificar se nao existe um arquivo com este mesmo nome
+	// verificar se possui um bloco livre no diretório e na fat
+	for (i = 0; i < size_dir; i++){
+
+		if (strcmp(block.dir[i].filename, token) == 0){
+			if(block.dir[i].attributes == 1){
+				found_unlink = 1;
+				union data_cluster cluster_dir = __readCluster__(block.dir[i].first_block);
+
+				int j;
+				for (j = 0; j < size_dir; j++){
+					if(cluster_dir.dir[j].first_block != 0){
+						printf("Diretório ainda possui elementos!\n");
+						return;
+					}
+				}
+
+				memset(&cluster_dir,0x0000,CLUSTER_SIZE);
+				fat[block.dir[i].first_block] = 0x0000;
+
+				__writeCluster__(block.dir[i].first_block,&cluster_dir);
+				memset(&block.dir[i],0x0000,sizeof(dir_entry_t));
+
+				__resize__(directories,-block.dir[i].size);
+
+				__writeCluster__(index_block_fat,&block);
+				__writeFat__();
+				break;
+
+			}else if(block.dir[i].attributes == 0){
+				found_unlink = 1;
+
+				uint16_t current = block.dir[i].first_block;
+				uint16_t temp = block.dir[i].first_block;
+				// vai apagando os clusters  até o penultimo cluster
+				while (fat[current] != 0xffff){
+					union data_cluster cluster_dir = __readCluster__(current);
+					memset(&cluster_dir,0x0000,CLUSTER_SIZE);
+					__writeCluster__(current,&cluster_dir);
+					temp = fat[current];
+					fat[current] = 0x0000;
+					current = temp;
+				}
+
+				// ultimo cluster que possui o valor 0xffff
+				union data_cluster cluster_dir = __readCluster__(current);
+				memset(&cluster_dir,0x0000,CLUSTER_SIZE);
+				__writeCluster__(current,&cluster_dir);
+				fat[current] = 0x0000;
+
+				__resize__(directories,-block.dir[i].size);
+
+				memset(&block.dir[i],0x0000,sizeof(dir_entry_t));
+				__writeCluster__(index_block_fat,&block);
+				__writeFat__();
+				break;
+				
+			}
+		}
+		
+	}
+
+	if(!found_unlink){
+		printf("Arquivo não encontrado!\n");
+		return;
+	}
+
+	free(cpy);
+}
+
+void write(char * words, char* directories){
+	char dir_copy[strlen(directories)];
+	strcpy(dir_copy,directories);
+
+	char *cpy = malloc(strlen(directories)*sizeof(char)); 
+	strcpy(cpy, directories);
+
+	char * token;
+	token = strtok(cpy,"/"); // pega o primeiro elemento apos root
+	
+	int index_block_fat = 0;
+
+	union data_cluster block;
+
+	if (directories[0] == '/'){
+		index_block_fat = 9;
+		block = __readCluster__(9);
+	}else{
+		printf("Caminho não possui diretório root!\n");
+		return;
+	}
+	
+	int count = 0;
+
+	// conta quantos direitorios há na string
+	while(token != NULL){
+		token = strtok(NULL,"/"); 
+		count++;
+	}
+
+	token = strtok(dir_copy,"/");
+
+	// caminha nos diretórios até chegar no penúltimo,
+    //  pois o último é o arquivo que deve ser criado
+	while( count > 1){;
+		int i;
+		int size_dir = CLUSTER_SIZE / sizeof(dir_entry_t);
+		int found_dir = 0;
+
+		// procura o diretorio atual no anterior
+		for (i = 0; i < size_dir; i ++){
+
+			if (strcmp(block.dir[i].filename,token) == 0){
+				found_dir = 1;
+				if(block.dir[i].attributes == 1){
+					index_block_fat = block.dir[i].first_block;
+					block = __readCluster__(block.dir[i].first_block);
+				}else{
+					printf("%s não é um diretório!\n",token);
+				}
+				break;
+			}
+		}
+
+		if (!found_dir){
+			printf("Não existe este diretório %s\n",token);
+			return;
+		}
+
+		token = strtok(NULL,"/"); 
+		count--;
+	}
+
+	int size_dir = CLUSTER_SIZE / sizeof(dir_entry_t);
+	int i;
+	int found_unlink = 0;
+	// tendo o diretorio no qual queremos criar o novo (token)
+	// basta verificar se nao existe um arquivo com este mesmo nome
+	// verificar se possui um bloco livre no diretório e na fat
+	for (i = 0; i < size_dir; i++){
+
+		if (strcmp(block.dir[i].filename, token) == 0){
+
+			if(block.dir[i].attributes == 0){
+				found_unlink = 1;
+
+				uint16_t current = block.dir[i].first_block;
+				uint16_t temp = block.dir[i].first_block;
+
+				// vai apagando os clusters até o penultimo cluster
+				while (fat[current] != 0xffff){
+					union data_cluster cluster_dir = __readCluster__(current);
+					memset(&cluster_dir,0x0000,CLUSTER_SIZE);
+					__writeCluster__(current,&cluster_dir);
+					temp = fat[current];
+					fat[current] = 0x0000;
+					current = temp;
+				}
+
+				// ultimo cluster que possui o valor 0xffff
+				union data_cluster cluster_dir = __readCluster__(current);
+				memset(&cluster_dir,0x0000,CLUSTER_SIZE);
+				block.dir[i].first_block = current;
+				__writeCluster__(current,&cluster_dir);
+
+				int len = strlen(words);
+
+				block.dir[i].size = len;
+				__resize__(directories,len);
+
+				int number_clusters = ceil(len/(CLUSTER_SIZE * 1.0));
+
+    			char buffer[len + 1];
+				
+				while(1){
+					int offset = i * CLUSTER_SIZE;
+					__slice_str__(words, buffer, offset, CLUSTER_SIZE + offset);
+
+					cluster_dir = __readCluster__(current);
+					memcpy(cluster_dir.data,buffer,sizeof(char) * strlen(buffer));
+					__writeCluster__(current,&cluster_dir);
+
+					fat[current] = 0xffff;
+					i++;
+
+					if (i < number_clusters){
+						int next_index_fat = __findFreeSpaceFat__();
+
+						if( next_index_fat == -1 ){
+							printf("Fat não possui espaço vazio!\n");
+							return;
+						}
+
+						fat[current] = next_index_fat;
+						current = next_index_fat;
+
+					}else{
+						break;
+					}
+				}
+
+				__writeCluster__(index_block_fat,&block);
+				__writeFat__();
+				break;
+			}
+				
+		}
+		
+	}
+
+	if(!found_unlink){
+		printf("Arquivo não encontrado!\n");
+		return;
+	}
+	free(cpy);
+}
+
 
 void append(char * words, char* directories){
 	char dir_copy[strlen(directories)];
@@ -337,8 +815,8 @@ void append(char * words, char* directories){
 
 	token = strtok(dir_copy,"/");
 
-	// caminha nos diretórios até chegar no ultimo 
-	// no qual é o que deve ser criado
+	// caminha nos diretórios até chegar no penúltimo,
+    //  pois o último é o arquivo que deve ser utilzizado
 	while( count > 1){;
 		int i;
 		int size_dir = CLUSTER_SIZE / sizeof(dir_entry_t);
@@ -400,6 +878,7 @@ void append(char * words, char* directories){
 					current = fat[current];
 				}
 
+				// tendo chegado no ultimo cluster preencho os espaços livres com a palavra
 				union data_cluster cluster_dir = __readCluster__(current);
 				int j;
 					for (j = 0; j < CLUSTER_SIZE; j ++){
@@ -410,15 +889,17 @@ void append(char * words, char* directories){
 						}
 					}
 				__writeCluster__(current,&cluster_dir);
-				// realizo um __slice_str__ (words, buffer, i, strlen(wrods))
-
+				
+				// se no espaço livre do cluster final coube toda a palavra
 				if (count_letters == strlen(words)){
 					__writeCluster__(index_block_fat,&block);
 					__writeFat__();
 					return;
 				}
-
+				// realiza-se um split da palavra desta forma se obtem o restante 
+				// string no qual deve ser salva em clusters livres
 				__slice_str__(words, buffer, count_letters, strlen(words));
+
 				strcpy(words,buffer);
 				len = strlen(words);
 				int number_clusters = ceil(len/(CLUSTER_SIZE * 1.0));
@@ -504,7 +985,7 @@ void read(char* directories){
 	token = strtok(dir_copy,"/");
 
 	// caminha nos diretórios até chegar no ultimo 
-	// no qual é o que deve ser criado
+	// no qual é o que deve ser lido
 	while( count > 1) {
 		int i;
 		int size_dir = CLUSTER_SIZE / sizeof(dir_entry_t);
@@ -551,7 +1032,8 @@ void read(char* directories){
 
 				char result[block.dir[i].size];
 				int count_letters = 0;
-				// vai apagando os clusters do segundo até o penultimo cluster
+				// vai andando nos clusters até o penultimo cluster
+				//  e salvando seus valores em result
 				while (fat[current] != 0xffff){
 					union data_cluster cluster_dir = __readCluster__(current);
 					int j;
@@ -562,7 +1044,7 @@ void read(char* directories){
 					}
 					current = fat[current];
 				}
-
+				// ultimo cluster com valor na fat de 0xffff
 				union data_cluster cluster_dir = __readCluster__(current);
 				int j;
 					for (j = 0; j < CLUSTER_SIZE; j ++){
@@ -571,6 +1053,7 @@ void read(char* directories){
 						count_letters++;
 					}
 				
+				// imprime os dados do arquivo
 				for (j = 0; j < block.dir[i].size; j++){
 					printf("%c",result[j]);
 				}
@@ -586,486 +1069,9 @@ void read(char* directories){
 	free(cpy);
 }
 
-
-
-void unlink(char* directories){
-
-	char dir_copy[strlen(directories)];
-	strcpy(dir_copy,directories);
-
-	char *cpy = malloc(strlen(directories)*sizeof(char)); 
-	strcpy(cpy, directories);
-
-	char * token;
-	token = strtok(cpy,"/"); // pega o primeiro elemento apos root
-	
-	int index_block_fat = 0;
-
-	union data_cluster block;
-
-	if (directories[0] == '/'){
-		index_block_fat = 9;
-		block = __readCluster__(9);
-	}else{
-		printf("Caminho não possui diretório root!\n");
-		return;
-	}
-	
-	int count = 0;
-
-	// conta quantos direitorios há na string
-	while(token != NULL){
-		token = strtok(NULL,"/"); 
-		count++;
-	}
-
-	token = strtok(dir_copy,"/");
-
-	// caminha nos diretórios até chegar no ultimo 
-	// no qual é o que deve ser criado
-	while( count > 1) {
-		int i;
-		int size_dir = CLUSTER_SIZE / sizeof(dir_entry_t);
-		int found_dir = 0;
-
-		// procura o diretorio atual no anterior
-		for (i = 0; i < size_dir; i ++){
-
-			if (strcmp(block.dir[i].filename,token) == 0){
-				found_dir = 1;
-				if(block.dir[i].attributes == 1){
-					index_block_fat = block.dir[i].first_block;
-					block = __readCluster__(block.dir[i].first_block);
-				}else{
-					printf("%s não é um diretório!\n",token);
-				}
-				break;
-			}
-		}
-
-		if (!found_dir){
-			printf("Não existe este diretório %s\n",token);
-			return;
-		}
-
-		token = strtok(NULL,"/"); 
-		count--;
-	}
-
-	int size_dir = CLUSTER_SIZE / sizeof(dir_entry_t);
-	int i;
-	int found_unlink = 0;
-	// tendo o diretorio no qual queremos criar o novo (token)
-	// basta verificar se nao existe um arquivo com este mesmo nome
-	// verificar se possui um bloco livre no diretório e na fat
-	for (i = 0; i < size_dir; i++){
-
-		if (strcmp(block.dir[i].filename, token) == 0){
-			if(block.dir[i].attributes == 1){
-				found_unlink = 1;
-				union data_cluster cluster_dir = __readCluster__(block.dir[i].first_block);
-
-				int j;
-				for (j = 0; j < size_dir; j++){
-					if(cluster_dir.dir[j].first_block != 0){
-						printf("Diretório ainda possui elementos!\n");
-						return;
-					}
-				}
-
-				memset(&cluster_dir,0x0000,CLUSTER_SIZE);
-				fat[block.dir[i].first_block] = 0x0000;
-
-				__writeCluster__(block.dir[i].first_block,&cluster_dir);
-				memset(&block.dir[i],0x0000,sizeof(dir_entry_t));
-
-				__resize__(directories,-block.dir[i].size);
-
-				__writeCluster__(index_block_fat,&block);
-				__writeFat__();
-				break;
-
-			}else if(block.dir[i].attributes == 0){
-				found_unlink = 1;
-
-				uint16_t current = block.dir[i].first_block;
-				uint16_t temp = block.dir[i].first_block;
-				// vai apagando os clusters do segundo até o penultimo cluster
-				while (fat[current] != 0xffff){
-					union data_cluster cluster_dir = __readCluster__(current);
-					memset(&cluster_dir,0x0000,CLUSTER_SIZE);
-					__writeCluster__(current,&cluster_dir);
-					temp = fat[current];
-					fat[current] = 0x0000;
-					current = temp;
-				}
-
-				union data_cluster cluster_dir = __readCluster__(current);
-				memset(&cluster_dir,0x0000,CLUSTER_SIZE);
-				__writeCluster__(current,&cluster_dir);
-				fat[current] = 0x0000;
-
-				__resize__(directories,-block.dir[i].size);
-
-				memset(&block.dir[i],0x0000,sizeof(dir_entry_t));
-				__writeCluster__(index_block_fat,&block);
-				__writeFat__();
-				break;
-				
-			}
-		}
-		
-	}
-
-	if(!found_unlink){
-		printf("Arquivo não encontrado!\n");
-		return;
-	}
-
-	free(cpy);
-}
-
-
-void write(char * words, char* directories){
-	char dir_copy[strlen(directories)];
-	strcpy(dir_copy,directories);
-
-	char *cpy = malloc(strlen(directories)*sizeof(char)); 
-	strcpy(cpy, directories);
-
-	char * token;
-	token = strtok(cpy,"/"); // pega o primeiro elemento apos root
-	
-	int index_block_fat = 0;
-
-	union data_cluster block;
-
-	if (directories[0] == '/'){
-		index_block_fat = 9;
-		block = __readCluster__(9);
-	}else{
-		printf("Caminho não possui diretório root!\n");
-		return;
-	}
-	
-	int count = 0;
-
-	// conta quantos direitorios há na string
-	while(token != NULL){
-		token = strtok(NULL,"/"); 
-		count++;
-	}
-
-	token = strtok(dir_copy,"/");
-
-	// caminha nos diretórios até chegar no ultimo 
-	// no qual é o que deve ser criado
-	while( count > 1){;
-		int i;
-		int size_dir = CLUSTER_SIZE / sizeof(dir_entry_t);
-		int found_dir = 0;
-
-		// procura o diretorio atual no anterior
-		for (i = 0; i < size_dir; i ++){
-
-			if (strcmp(block.dir[i].filename,token) == 0){
-				found_dir = 1;
-				if(block.dir[i].attributes == 1){
-					index_block_fat = block.dir[i].first_block;
-					block = __readCluster__(block.dir[i].first_block);
-				}else{
-					printf("%s não é um diretório!\n",token);
-				}
-				break;
-			}
-		}
-
-		if (!found_dir){
-			printf("Não existe este diretório %s\n",token);
-			return;
-		}
-
-		token = strtok(NULL,"/"); 
-		count--;
-	}
-
-	int size_dir = CLUSTER_SIZE / sizeof(dir_entry_t);
-	int i;
-	int found_unlink = 0;
-	// tendo o diretorio no qual queremos criar o novo (token)
-	// basta verificar se nao existe um arquivo com este mesmo nome
-	// verificar se possui um bloco livre no diretório e na fat
-	for (i = 0; i < size_dir; i++){
-
-		if (strcmp(block.dir[i].filename, token) == 0){
-
-			if(block.dir[i].attributes == 0){
-				found_unlink = 1;
-
-				uint16_t current = block.dir[i].first_block;
-				uint16_t temp = block.dir[i].first_block;
-
-				// vai apagando os clusters do segundo até o penultimo cluster
-				while (fat[current] != 0xffff){
-					union data_cluster cluster_dir = __readCluster__(current);
-					memset(&cluster_dir,0x0000,CLUSTER_SIZE);
-					__writeCluster__(current,&cluster_dir);
-					temp = fat[current];
-					fat[current] = 0x0000;
-					current = temp;
-				}
-
-				union data_cluster cluster_dir = __readCluster__(current);
-				memset(&cluster_dir,0x0000,CLUSTER_SIZE);
-				block.dir[i].first_block = current;
-				__writeCluster__(current,&cluster_dir);
-
-				int len = strlen(words);
-
-				block.dir[i].size = len;
-				__resize__(directories,len);
-
-				int number_clusters = ceil(len/(CLUSTER_SIZE * 1.0));
-
-    			char buffer[len + 1];
-				
-				while(1){
-					int offset = i * CLUSTER_SIZE;
-					__slice_str__(words, buffer, offset, CLUSTER_SIZE + offset);
-
-					cluster_dir = __readCluster__(current);
-					memcpy(cluster_dir.data,buffer,sizeof(char) * strlen(buffer));
-					__writeCluster__(current,&cluster_dir);
-
-					fat[current] = 0xffff;
-					i++;
-
-					if (i < number_clusters){
-						int next_index_fat = __findFreeSpaceFat__();
-
-						if( next_index_fat == -1 ){
-							printf("Fat não possui espaço vazio!\n");
-							return;
-						}
-
-						fat[current] = next_index_fat;
-						current = next_index_fat;
-
-					}else{
-						break;
-					}
-				}
-
-				__writeCluster__(index_block_fat,&block);
-				__writeFat__();
-				break;
-			}
-				
-		}
-		
-	}
-
-	if(!found_unlink){
-		printf("Arquivo não encontrado!\n");
-		return;
-	}
-	free(cpy);
-}
-
-void mkdir(char* directories){
-	char dir_copy[strlen(directories)];
-	strcpy(dir_copy,directories);
-
-	char *cpy = malloc(strlen(directories)*sizeof(char)); 
-	strcpy(cpy, directories);
-
-	char * token;
-	token = strtok(cpy,"/"); // pega o primeiro elemento apos root
-	
-	int index_block_fat = 0;
-
-	union data_cluster block;
-
-	if (directories[0] == '/'){
-		index_block_fat = 9;
-		block = __readCluster__(9);
-	}else{
-		printf("Caminho não possui diretório root!\n");
-		return;
-	}
-	
-	int count = 0;
-
-	// conta quantos direitorios há na string
-	while(token != NULL){
-		token = strtok(NULL,"/"); 
-		count++;
-	}
-
-	token = strtok(dir_copy,"/");
-
-	// caminha nos diretórios até chegar no ultimo 
-	// no qual é o que deve ser criado
-	while( count > 1){;
-		int i;
-		int size_dir = CLUSTER_SIZE / sizeof(dir_entry_t);
-		int found_dir = 0;
-
-		// procura o diretorio atual no anterior
-		for (i = 0; i < size_dir; i ++){
-
-			if (strcmp(block.dir[i].filename,token) == 0){
-				found_dir = 1;
-				if(block.dir[i].attributes == 1){
-					index_block_fat = block.dir[i].first_block;
-					block = __readCluster__(block.dir[i].first_block);
-				}else{
-					printf("%s não é um diretório!\n",token);
-				}
-				break;
-			}
-		}
-
-		if (!found_dir){
-			printf("Não existe este diretório %s\n",token);
-			return;
-		}
-
-		token = strtok(NULL,"/"); 
-		count--;
-	}
-
-	int size_dir = CLUSTER_SIZE / sizeof(dir_entry_t);
-	int i;
-
-	// tendo o diretorio no qual queremos criar o novo (token)
-	// basta verificar se nao existe um arquivo com este mesmo nome
-	// verificar se possui um bloco livre no diretório e na fat
-	for (i = 0; i < size_dir; i++){
-
-		if (strcmp(block.dir[i].filename, token) == 0){
-			printf("Já possui uma entrada neste diretório com este mesmo nome!\n");
-				return;
-		}
-
-		if (block.dir[i].first_block == 0){
-			
-			int index_fat = __findFreeSpaceFat__();
-
-			if(index_fat == -1 ){
-				printf("Fat não possui espaço vazio!\n");
-				return;
-			}
-
-			fat[index_fat] = 0xffff;
-			dir_entry_t new_dir;
-			// limpa o novo diretorio a ser criado (apaga os lixos da memoria)
-
-			memset(&new_dir,0x0000,32);
-			memcpy(new_dir.filename,token,sizeof(char) * strlen(token));
-			new_dir.attributes = 1;
-			new_dir.first_block = index_fat;
-			new_dir.size = 0;
-
-			// salva este novo diretorio no bloco do pai
-			block.dir[i] = new_dir;
-			__writeCluster__(index_block_fat,&block);
-			__writeFat__();
-			break;
-		}
-	}
-	
-	free(cpy);
-}
-
-void create(char* directories){
-    char dir_copy[strlen(directories)];
-    strcpy(dir_copy,directories);
-
-    char *cpy = malloc(strlen(directories)*sizeof(char)); 
-	strcpy(cpy, directories);
-
-    char * token;
-    token = strtok(cpy,"/"); // pega o primeiro elemento apos root
-
-    int index_block_fat = 0;
-    union data_cluster block;
-    if (directories[0] == '/'){
-        index_block_fat = 9;
-        block = __readCluster__(9);
-    }else{
-        printf("Caminho não possui diretório root!\n");
-        return;
-    }
-    int count = 0;
-    // conta quantos direitorios há na string
-    while(token != NULL){
-        token = strtok(NULL,"/");
-        count++;
-    }
-    token = strtok(dir_copy,"/");
-    // caminha nos diretórios até chegar no penúltimo
-    // no qual é o arquivo que deve ser criado
-    while( count > 1){;
-        int i;
-        int size_dir = CLUSTER_SIZE / sizeof(dir_entry_t);
-        int found_dir = 0;
-        // procura o diretorio atual no anterior
-        for (i = 0; i < size_dir; i ++){
-            if (strcmp(block.dir[i].filename,token) == 0){
-                found_dir = 1;
-                if(block.dir[i].attributes == 1){
-                    index_block_fat = block.dir[i].first_block;
-                    block = __readCluster__(block.dir[i].first_block);
-                }else{
-                    printf("%s não é um diretório!\n",token);
-                }
-                break;
-            }
-        }
-        if (!found_dir){
-            printf("Não existe este diretório %s\n",token);
-            return;
-        }
-        token = strtok(NULL,"/");
-        count--;
-    }
-    int size_dir = CLUSTER_SIZE / sizeof(dir_entry_t);
-    int i;
-    // tendo o diretorio no qual queremos criar o novo arquivo (token)
-    // basta verificar se nao existe um arquivo com este mesmo nome
-    // verificar se possui um bloco livre no diretório e na fat
-    for (i = 0; i < size_dir; i++){
-        if (strcmp(block.dir[i].filename, token) == 0){
-            printf("Já possui uma entrada neste diretório com este mesmo nome!\n");
-            return;
-        }
-        if (block.dir[i].first_block == 0){
-            int index_fat = __findFreeSpaceFat__();
-            if(index_fat == -1 ){
-                printf("Fat não possui espaço vazio!\n");
-                return;
-            }
-            fat[index_fat] = 0xffff;
-            dir_entry_t new_arq;
-            // limpa o novo arquivo a ser criado (apaga os lixos da memoria)
-            memset(&new_arq,0x0000,sizeof(dir_entry_t));
-            memcpy(new_arq.filename,token,sizeof(char) * strlen(token));
-            new_arq.attributes = 0;
-            new_arq.first_block = index_fat;
-            new_arq.size = 0;
-            // salva este novo arquivo no bloco do pai
-            block.dir[i] = new_arq;
-            __writeCluster__(index_block_fat,&block);
-            __writeFat__();
-            break;
-        }
-    }
-    free(cpy);
-}
-
 int main()
 {
+   system("clear");
    char input_str[4194304];
    int ch;
    int i;
@@ -1090,7 +1096,6 @@ int main()
             system("clear");
 
 		}else if (strstr(input_str, "\"") != NULL) {
-			printf("teste");
 			char *cpy = malloc(strlen(input_str)*sizeof(char)); 
 			 strcpy(cpy, input_str);
 
@@ -1101,19 +1106,15 @@ int main()
 			if (strcmp(token,"write") == 0){
 
 				char *string = strtok(NULL, "\""); 
-				printf("\n%s\n",string);
 				
 				char *path = strtok(NULL, " \"");
-				printf("\n%s\n",path);
 				write(string,path);
 
 			} else if (strcmp(token,"append") == 0){
 
 				char *string = strtok(NULL, "\""); 
-				printf("\n%s\n",string);
 				
 				char *path = strtok(NULL, " \"");
-				printf("\n%s\n",path);
 				append(string,path);
 
 			}
