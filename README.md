@@ -33,9 +33,7 @@ gcc -o virtual_file virtual_file.c -lm
 Linux Ubuntu 16.04.5 LTS
 
 gcc (Ubuntu 6.4.0-17ubuntu1~16.04) 6.4.0 20180424  
-
-Uso do programa hexdump (com o modo canonical) para realizar a depura¸c~ao e visualiza¸c~ao das estruturas de dados do
-sistema de arquivos virtual.
+Uso do programa hexdump (com o modo canonical) para realizar a depuração e visualização das estruturas de dados do sistema de arquivos virtual.
 
 ### Material Extra de Apoio ###
 http://www.cse.scu.edu/~tschwarz/COEN252_09/Lectures/FAT.html?fbclid=IwAR15vgsRT1pJIwcxH_zxEHECgjoRbQVzDQVjXHfDSK-mn191JlsFq8krpVg
