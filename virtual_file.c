@@ -570,7 +570,11 @@ void read(char* directories){
 						result[count_letters] = cluster_dir.data[j];
 						count_letters++;
 					}
-				printf("resultado = %s\n",result);
+				
+				for (j = 0; j < block.dir[i].size; j++){
+					printf("%c",result[j]);
+				}
+				printf("\n");
 				break;	
 			}	
 	}
@@ -957,7 +961,7 @@ void mkdir(char* directories){
 			dir_entry_t new_dir;
 			// limpa o novo diretorio a ser criado (apaga os lixos da memoria)
 
-			memset(&new_dir,0x00,32);
+			memset(&new_dir,0x0000,32);
 			memcpy(new_dir.filename,token,sizeof(char) * strlen(token));
 			new_dir.attributes = 1;
 			new_dir.first_block = index_fat;
@@ -1045,7 +1049,7 @@ void create(char* directories){
             fat[index_fat] = 0xffff;
             dir_entry_t new_arq;
             // limpa o novo arquivo a ser criado (apaga os lixos da memoria)
-            memset(&new_arq,0x00,sizeof(dir_entry_t));
+            memset(&new_arq,0x0000,sizeof(dir_entry_t));
             memcpy(new_arq.filename,token,sizeof(char) * strlen(token));
             new_arq.attributes = 0;
             new_arq.first_block = index_fat;
@@ -1062,10 +1066,11 @@ void create(char* directories){
 
 int main()
 {
-   char input_str[80];
+   char input_str[4194304];
    int ch;
    int i;
 	while (1){
+		memset(input_str,0x0000,sizeof(input_str));
 		printf(">> ");
 		for (i = 0; (i < (sizeof(input_str)-1) &&
          ((ch = fgetc(stdin)) != EOF) && (ch != '\n')); i++){
@@ -1078,11 +1083,41 @@ int main()
 			init();
 		}else if (strcmp(input_str,"load") == 0){
 			load();
-		} else if (strcmp(input_str,"quit") == 0){
+		} else if (strcmp(input_str,"exit") == 0){
             exit(0);
 
-        } else if (strcmp(input_str,"clear") == 0){
+        }else if (strcmp(input_str,"clear") == 0){
             system("clear");
+
+		}else if (strstr(input_str, "\"") != NULL) {
+			printf("teste");
+			char *cpy = malloc(strlen(input_str)*sizeof(char)); 
+			 strcpy(cpy, input_str);
+
+			char * token;
+
+			token = strtok(cpy," \""); // pega a primeira palavra  antes do espaço
+
+			if (strcmp(token,"write") == 0){
+
+				char *string = strtok(NULL, "\""); 
+				printf("\n%s\n",string);
+				
+				char *path = strtok(NULL, " \"");
+				printf("\n%s\n",path);
+				write(string,path);
+
+			} else if (strcmp(token,"append") == 0){
+
+				char *string = strtok(NULL, "\""); 
+				printf("\n%s\n",string);
+				
+				char *path = strtok(NULL, " \"");
+				printf("\n%s\n",path);
+				append(string,path);
+
+			}
+
 		}else {
 
 			 char *cpy = malloc(strlen(input_str)*sizeof(char)); 
@@ -1113,24 +1148,13 @@ int main()
 				char *path = strtok(NULL, " "); // apenas o caminho a ser utilizado
 				unlink(path);
 
-			}else if (strcmp(token,"write") == 0){
-
-				char *string = strtok(NULL, " ");
-
-				char *path = strtok(NULL, " ");
-				write(string,path);
-
-			}else if (strcmp(token,"append") == 0){
-
-				char *string = strtok(NULL, " ");
-
-				char *path = strtok(NULL, " ");
-				append(string,path);
-
 			}else if (strcmp(token,"read") == 0){
 
 				char *path = strtok(NULL, " "); // apenas o caminho a ser utilizado
 				read(path);
+
+			}else {
+				printf("Comando não encontrado!\n");
 			}
 
 			free(cpy);
