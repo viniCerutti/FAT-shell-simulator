@@ -68,7 +68,6 @@ void init(){
 		fwrite(&clusters, CLUSTER_SIZE, 1, ptr_myfile);
 	}
 	fclose(ptr_myfile);
-
 }
 
 
@@ -118,7 +117,6 @@ union data_cluster __readCluster__(int index){
 	fclose(ptr_myfile);
 
 	return cluster;
-
 }
 
 void __writeCluster__(int index, union data_cluster *cluster){
@@ -264,11 +262,8 @@ void ls (char* directories){
 			printf("%s \n",block.dir[i].filename);
 		}
 	}
-
 	free(cpy);
 }
-
-
 
 int __findFreeSpaceFat__(){
 	int i;
@@ -374,7 +369,7 @@ void append(char * words, char* directories){
 	int i;
 	int found_unlink = 0;
 	// tendo o diretorio no qual queremos criar o novo (token)
-	// basta verificar se nao existe um aqruivo com este mesmo nome
+	// basta verificar se nao existe um arquivo com este mesmo nome
 	// verificar se possui um bloco livre no diretório e na fat
 	for (i = 0; i < size_dir; i++){
 
@@ -395,11 +390,6 @@ void append(char * words, char* directories){
     			char buffer[len + 1];
 
     			int count_letters = 0;
-    			
-    			// chego no cluster final
-				// de i = 0 a 1024:
-					// se 0x000 == cluster.data[j]
-					// então data.cluter[j] = words[i]
 
     			// procura o último cluster do arquivo
     			while (fat[current] != 0xffff){
@@ -433,13 +423,7 @@ void append(char * words, char* directories){
 				uint16_t final_cluster = current;
 				current = __findFreeSpaceFat__();
 				fat[final_cluster] = current;
-				//aaaaaaaaaaaaaaaaaaaaaaaaaaaa bbbbbbbbbbbb
-				// words = bbbbbbbbbbbb
-				// len = strlen(words)
-				// int number_clusters = ceil(len/(CLUSTER_SIZE * 1.0));
-				// current  = __findFreeSpaceFat__();
-				// fat[posicao_final_cluster] = current
-
+				
 				while(1){
 					int offset = i * CLUSTER_SIZE;
 					__slice_str__(words, buffer, offset, CLUSTER_SIZE + offset);
@@ -516,7 +500,6 @@ void read(char* directories){
 
 	token = strtok(dir_copy,"/");
 
-
 	// caminha nos diretórios até chegar no ultimo 
 	// no qual é o que deve ser criado
 	while( count > 1) {
@@ -552,7 +535,7 @@ void read(char* directories){
 	int i;
 	int found_unlink = 0;
 	// tendo o diretorio no qual queremos criar o novo (token)
-	// basta verificar se nao existe um aqruivo com este mesmo nome
+	// basta verificar se nao existe um arquivo com este mesmo nome
 	// verificar se possui um bloco livre no diretório e na fat
 	for (i = 0; i < size_dir; i++){
 
@@ -585,17 +568,14 @@ void read(char* directories){
 						count_letters++;
 					}
 				printf("resultado = %s\n",result);
-				break;
-				
-			}
-		
+				break;	
+			}	
 	}
 
 	if(!found_unlink){
 		printf("Arquivo não encontrado!\n");
 		return;
 	}
-
 	free(cpy);
 }
 
@@ -669,7 +649,7 @@ void unlink(char* directories){
 	int i;
 	int found_unlink = 0;
 	// tendo o diretorio no qual queremos criar o novo (token)
-	// basta verificar se nao existe um aqruivo com este mesmo nome
+	// basta verificar se nao existe um arquivo com este mesmo nome
 	// verificar se possui um bloco livre no diretório e na fat
 	for (i = 0; i < size_dir; i++){
 
@@ -700,7 +680,6 @@ void unlink(char* directories){
 
 			}else if(block.dir[i].attributes == 0){
 				found_unlink = 1;
-
 
 				uint16_t current = block.dir[i].first_block;
 				uint16_t temp = block.dir[i].first_block;
@@ -807,7 +786,7 @@ void write(char * words, char* directories){
 	int i;
 	int found_unlink = 0;
 	// tendo o diretorio no qual queremos criar o novo (token)
-	// basta verificar se nao existe um aqruivo com este mesmo nome
+	// basta verificar se nao existe um arquivo com este mesmo nome
 	// verificar se possui um bloco livre no diretório e na fat
 	for (i = 0; i < size_dir; i++){
 
@@ -815,7 +794,6 @@ void write(char * words, char* directories){
 
 			if(block.dir[i].attributes == 0){
 				found_unlink = 1;
-
 
 				uint16_t current = block.dir[i].first_block;
 				uint16_t temp = block.dir[i].first_block;
@@ -842,26 +820,8 @@ void write(char * words, char* directories){
 
 				int number_clusters = ceil(len/(CLUSTER_SIZE * 1.0));
 
-
-				//if (number_clusters == 1){
-				//	memcpy(cluster_dir.data,words,sizeof(char) * strlen(words));
-				//}
-
     			char buffer[len + 1];
-				// 
-				// enquanto verdade
-					// escrevo [0 + i * cluster_size : 1024 + i * cluster_size] no cluster_dir
-					// escrevo cluster_dir no arquivo
-					// fat[current] = 0xffff
-					// i++
-					// calculo a sobra i < number_clusters
-						// se tiver sobra 
-							// temp = procuro um index na fat de cluster livre
-							// fat[current] = temp
-							// current = temp
-						// senão
-						//	break;
-
+				
 				while(1){
 					int offset = i * CLUSTER_SIZE;
 					__slice_str__(words, buffer, offset, CLUSTER_SIZE + offset);
@@ -972,7 +932,7 @@ void mkdir(char* directories){
 	int i;
 
 	// tendo o diretorio no qual queremos criar o novo (token)
-	// basta verificar se nao existe um aqruivo com este mesmo nome
+	// basta verificar se nao existe um arquivo com este mesmo nome
 	// verificar se possui um bloco livre no diretório e na fat
 	for (i = 0; i < size_dir; i++){
 
