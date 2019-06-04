@@ -748,8 +748,9 @@ void write(char * words, char* directories){
 
     			char buffer[len + 1];
 				
+				int j = 0;
 				while(1){
-					int offset = i * CLUSTER_SIZE;
+					int offset = j * CLUSTER_SIZE;
 					__slice_str__(words, buffer, offset, CLUSTER_SIZE + offset);
 
 					cluster_dir = __readCluster__(current);
@@ -757,9 +758,9 @@ void write(char * words, char* directories){
 					__writeCluster__(current,&cluster_dir);
 
 					fat[current] = 0xffff;
-					i++;
+					j++;
 
-					if (i < number_clusters){
+					if (j < number_clusters){
 						int next_index_fat = __findFreeSpaceFat__();
 
 						if( next_index_fat == -1 ){
@@ -916,9 +917,9 @@ void append(char * words, char* directories){
 				uint16_t final_cluster = current;
 				current = __findFreeSpaceFat__();
 				fat[final_cluster] = current;
-				
+				j = 0;
 				while(1){
-					int offset = i * CLUSTER_SIZE;
+					int offset = j * CLUSTER_SIZE;
 					__slice_str__(words, buffer, offset, CLUSTER_SIZE + offset);
 
 					cluster_dir = __readCluster__(current);
@@ -926,9 +927,9 @@ void append(char * words, char* directories){
 					__writeCluster__(current,&cluster_dir);
 
 					fat[current] = 0xffff;
-					i++;
+					j++;
 
-					if (i < number_clusters){
+					if (j < number_clusters){
 						int next_index_fat = __findFreeSpaceFat__();
 
 						if( next_index_fat == -1 ){
