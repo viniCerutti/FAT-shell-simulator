@@ -1,4 +1,4 @@
-# T2-Sisop 
+# FAT-simulation And Shell
 Este trabalho é uma implementação de um simulador de um sistema de arquivos simples baseado em tabela de alocação de 16 bits (FAT) e um shell usado para realizar operações sobre este sistema de arquivos.
 
 # Comandos Interpreatados #
